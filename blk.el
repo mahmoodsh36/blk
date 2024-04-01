@@ -21,8 +21,6 @@
 
 ;;; this package is for making arbitrary links across text files
 
-;;; Code:
-
 (defcustom blk-directories
   (list (expand-file-name "~/notes/")
         (file-name-parent-directory (expand-file-name user-init-file)))
