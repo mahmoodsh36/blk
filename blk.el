@@ -264,6 +264,7 @@
                     matches))))))
     matches))
 
+;;;###autoload
 (defun blk-find (text)
   "find entries defined by patterns in `blk-patterns' using the grepper `blk-grepper', when found, visit it"
   (interactive
@@ -366,3 +367,4 @@
 (require 'blk-org)
 
 (provide 'blk)
+;; blk.el ends here

@@ -45,23 +45,11 @@
          (t link)))
     link))
 
-(defun org-blk-marker (link _)
-  "open the file containing a block with the name `link'"
-  (let* ((result (blk-find-by-id link))
-         (filepath (plist-get result :filepath))
-         (position (plist-get result :position)))
-    ;; for now we cant work with the marker returned unless we have the file open in a buffer4 after the function returns (unfortunately this is how org-transclusion handles things)
-    (find-file-noselect filepath)
-    (blk-with-file-as-current-buffer
-     filepath
-     (goto-char position)
-     (point-marker))))
-
 (defun org-transclusion-add-blk (link plist)
   "return a list for blk link object and plist. return nil if not found."
   (when (string= "blk" (org-element-property :type link))
     (let* ((id (org-element-property :path link))
-           (result (car (blk-find-by-id id)))
+           (result (ignore-errors (car (blk-find-by-id id))))
            (payload '(:tc-type "org-link")))
       (if result
           (progn
@@ -82,3 +70,4 @@
   "an alias to `org-open-at-point-global', to allow links to be openable in any major mode, defined for convenience.")
 
 (provide 'blk-org)
+;;; blk-org.el ends here
