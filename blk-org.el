@@ -24,12 +24,12 @@
                            :export #'org-blk-export))
 
 ;;;###autoload
-(defun blk-configure-org-transclude ()
+(defun blk-configure-org-transclusion ()
   (add-to-list 'org-transclusion-add-functions 'org-transclusion-add-blk))
 
 (defun org-blk-open (link _)
   "open the file containing a block with the name `link'"
-  (let* ((result (car (blk-find-by-id link))))
+  (let ((result (car (blk-find-by-id link))))
     (find-file (plist-get result :filepath))
     (goto-char (plist-get result :position))))
 
@@ -47,28 +47,34 @@
 
 (defun org-blk-marker (link _)
   "open the file containing a block with the name `link'"
-  (let* ((position (org-blk-find-anchor link))
-         (filepath (car position))
-         (line (cadr position)))
+  (let* ((result (blk-find-by-id link))
+         (filepath (plist-get result :filepath))
+         (position (plist-get result :position)))
     ;; for now we cant work with the marker returned unless we have the file open in a buffer4 after the function returns (unfortunately this is how org-transclusion handles things)
     (find-file-noselect filepath)
-    (with-file-as-current-buffer filepath
-      (goto-line line)
-      (point-marker))))
+    (blk-with-file-as-current-buffer
+     filepath
+     (goto-char position)
+     (point-marker))))
 
 (defun org-transclusion-add-blk (link plist)
-  "Return a list for Org-ID LINK object and PLIST.
-Return nil if not found."
+  "return a list for blk link object and plist. return nil if not found."
   (when (string= "blk" (org-element-property :type link))
-    (let* ((path (org-element-property :path link))
-           (marker (ignore-errors (org-blk-marker path t)))
+    (let* ((id (org-element-property :path link))
+           (result (car (blk-find-by-id id)))
            (payload '(:tc-type "org-link")))
-      (if marker
-          (append payload (org-transclusion-content-org-marker marker plist))
-        (message
-         (format "no transclusion done for this blk. ensure it works at point %d, line %d"
-                 (point) (org-current-line)))
-        nil))))
+      (if result
+          (progn
+            ;; for now we cant work with the marker returned unless we have the file open in a buffer4 after the function returns (unfortunately this is how org-transclusion handles things)
+            (find-file-noselect (plist-get result :filepath))
+            (blk-with-file-as-current-buffer
+             (plist-get result :filepath)
+             (goto-char (plist-get result :position))
+             (append payload
+                     (funcall (plist-get (plist-get result :matched-pattern) :transclusion-function) result))))
+        (progn (message (format "no transclusion done for this blk. ensure it works at point %d, line %d"
+                            (point) (org-current-line)))
+           nil)))))
 
 (defalias
   'blk-open-at-point

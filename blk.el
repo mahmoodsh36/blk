@@ -24,8 +24,7 @@
 (defcustom blk-directories
   (list (expand-file-name "~/notes/")
         (file-name-parent-directory (expand-file-name user-init-file)))
-  "directories to look for files in"
-  )
+  "directories to look for files in")
 
 (defcustom blk-list-directories-recursively
   nil
@@ -43,22 +42,12 @@
               :anchor-regex "^\(defun [^\s]+"
               :title-function 'blk-value-after-space
               :extract-id-function 'identity)
-        ;; (list :title "org denote link"
-        ;;         :filename-regex "*.org"
-        ;;         :pattern "[[denote:%n]]"
-        ;;         :with-id-pattern "[[denote:%n][%i]]" ;; %n for name, %i for identifier
-        ;;         :identifier-pattern "[^\n\s\\[\\]]*"
-        ;;         :name-pattern "[^\n\s\\[\\]]*")
-        ;; (list :file-regex "*.tex" :line-regex "" :name-regex "" :link-regex "" :title-function (lambda () ()))
-        ;; (list :title "org mode link")
-        ;; (list :title "markdown link")
-        ;; (list :title "latex link")
         )
   ":title is the title/type of the pattern, :filename-regex is the regex to match files to be grepped :anchor-regex is the regex for matching blocks of text that contain the target value which is then passed to :title-function to be turned into the final desired value to be passed to completing-read and that identifies the target, :link-function is the function that gets the id to be used when creating links to the target, the need for :link-function over :title-function is that an id and a name for the target can be different, as an id can be a random sequence but a name could be a more memorable sequence of characters. if the user wants the id to be the name itself, they may only supply :title-function"
   )
 
 (defcustom blk-rg-patterns
-  (list (list :title "titled org files or blocks"
+  (list (list :title "titled org file or block"
               :filename-regex ".*\\.org"
               :anchor-regex "(:title|:alias|#\\+title:|#\\+alias:|#\\+name:)\\s+[^:\\n]+"
               :title-function 'blk-value-after-space
@@ -81,9 +70,8 @@
         (list :title "elisp function"
               :filename-regex ".*\\.el"
               :anchor-regex "^\\(defun\\s+[^\\s]+"
-              :title-function 'blk-value-after-space
-              :extract-id-function 'identity)
-        (list :title "org headers"
+              :title-function 'blk-value-after-space)
+        (list :title "org header"
               :filename-regex ".*\\.org"
               :anchor-regex "^\\*+\\s.*"
               :title-function 'blk-value-after-space
@@ -91,14 +79,36 @@
                                      (or (org-id-get) (plist-get grep-result :value))))
         (list :filename-regex ".*\\.org"
               :anchor-regex "^:ID:\\s*"
-              :id-function 'blk-org-id-value)
+              :src-id-function 'blk-org-id-value)
         (list :filename-regex ".*\\.org"
               :anchor-regex "\\[\\[[a-z]+:[^\\[\\]]+\\]\\]|\\[\\[[a-z]+:[^\\[\\]]+\\]\\[[^\\[\\]]+\\]\\]"
-              :id-function 'blk-org-link-path)
-        ;; (list :title "latex link"
-        ;;       :filename-regex ".*\\.org|.*\\.tex"
-        ;;       :anchor-regex "\\label{[^\\{\\}]+}"
-        ;;       :id-function 'identity)
+              :dest-id-function 'blk-org-link-path)
+        (list :filename-regex ".*\\.org"
+              :anchor-regex "#+identifier:\\s+.*"
+              :src-id-function 'blk-value-after-colon)
+        (list :title "latex label"
+              :filename-regex ".*\\.\\(org\\|tex\\)"
+              :anchor-regex "\\\\\\\\label\\\\{[^\\\\{\\\\}]*\\\\}"
+              ;; :anchor-regex (shell-quote-argument "\\\\label\\{[^\\{\\}]*\\}")
+              :src-id-function 'blk-latex-label-id)
+        (list :title "id anchor for org named block"
+              :filename-regex ".*\\.org"
+              :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
+              :src-id-function 'blk-value-after-space
+              :transclusion-function
+              (lambda (grep-data)
+                (let ((elm (org-element-at-point)))
+                  (when elm
+                    (let* ((elm-type (org-element-type elm)))
+                      (cl-case elm-type
+                        ('special-block
+                         (list :src-content (buffer-substring (org-element-property :begin elm)
+                                                              (org-element-property :end elm))
+                               :src-buf (current-buffer)
+                               :src-beg (org-element-property :begin elm)
+                               :src-end (org-element-property :end elm))))
+                      ;; ('keyword (buffer-string))
+                      )))))
         )
   "the pattern table for ripgrep")
 
@@ -125,10 +135,16 @@
 (defun blk-org-id-value (org-id-text)
   (caddr (split-string org-id-text ":")))
 
+(defun blk-value-after-colon (text)
+  (cadr (split-string text ":")))
+
+(defun blk-latex-label-id (text)
+  (car (split-string (cadr (split-string text "{")) "}")))
+
 (defconst
   blk-grepper-rg
-  '(:command "rg --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
-    :delimiter "\t"))
+  (list :command "rg --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
+        :delimiter "\t"))
 
 (defcustom blk-grepper
   ;; 'blk-emacs-grep
@@ -230,7 +246,7 @@
              (files-str (string-join (mapcar 'shell-quote-argument matching-files) " "))
              (full-cmd (format-spec (plist-get cmd :command)
                                     `((?f . ,files-str)
-                                      (?r . ,(shell-quote-argument (plist-get pattern :anchor-regex))))))
+                                      (?r . ,(plist-get pattern :anchor-regex)))))
              (out (shell-command-to-string full-cmd))
              (sep (plist-get cmd :delimiter)))
         (dolist (line (split-string out "\n"))
@@ -251,8 +267,15 @@
 (defun blk-find (text)
   "find entries defined by patterns in `blk-patterns' using the grepper `blk-grepper', when found, visit it"
   (interactive
-   (list (let ((minibuffer-allow-text-properties t))
-           (completing-read "entry " (blk-list-entries)))))
+   (list (let* ((minibuffer-allow-text-properties t)
+                (entries (blk-list-entries))
+                (completion-extra-properties
+                 '(:annotation-function
+                   (lambda (key)
+                     (format "\t%s" (plist-get (plist-get (get-text-property 0 'grep-data key)
+                                                          :matched-pattern)
+                                               :title))))))
+           (completing-read "entry " entries))))
   (if (get-text-property 0 'grep-data text)
       (let* ((grep-data (get-text-property 0 'grep-data text))
              (filepath (plist-get grep-data :filepath))
@@ -320,9 +343,9 @@
 (defun blk-find-by-id (id)
   "find by `id', if a pattern and entry are matched"
   (let* ((id-patterns
-          (cl-remove-if
+          (cl-remove-if-not
            (lambda (pattern)
-             (plist-get pattern :title-function))
+             (plist-get pattern :src-id-function))
            blk-patterns))
          (grep-results
           (cl-remove-if-not
@@ -332,12 +355,14 @@
             (lambda (grep-result)
               (plist-put grep-result
                          :id
-                         (funcall (plist-get (plist-get grep-result :matched-pattern) :id-function)
+                         (funcall (plist-get (plist-get grep-result :matched-pattern) :src-id-function)
                                   (plist-get grep-result :value))))
             (blk-grep
              blk-grepper
              id-patterns
              (blk-list-files))))))
     grep-results))
+
+(require 'blk-org)
 
 (provide 'blk)
