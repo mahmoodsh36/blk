@@ -166,7 +166,7 @@
   "the program to use for grepping files, could be a function that takes as arguments the patterns and files, or a string representing a shell command to be formatted with the regex to grep for and the file list")
 
 (defcustom blk-patterns
-  (cl-case (choose-grepper)
+  (pcase (choose-grepper)
     (blk-grepper-rg blk-rg-patterns)
     (blk-grepper-grep blk-grep-patterns)
     (blk-grepper-emacs blk-emacs-patterns))
