@@ -94,7 +94,7 @@
         (list :title "id anchor for org named block"
               :filename-regex ".*\\.org"
               :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
-              :src-id-function 'blk-value-after-space
+              :src-id-function 'blk-value-after-space-before-colon
               :transclusion-function
               (lambda (grep-data)
                 (let ((elm (org-element-at-point)))
@@ -140,6 +140,9 @@
 
 (defun blk-latex-label-id (text)
   (car (split-string (cadr (split-string text "{")) "}")))
+
+(defun blk-value-after-space-before-colon (str)
+  (string-trim (car (split-string (blk-value-after-space str) ":"))))
 
 (defconst
   blk-grepper-rg
