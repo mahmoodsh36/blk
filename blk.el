@@ -154,6 +154,8 @@
   blk-grepper-rg
   (list :command "rg --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
         :delimiter "\t"))
+
+;;;###autoload
 (defun choose-grepper ()
   "choose a grepper depending on whether it can be found in `exec-path', fall back to the `blk-grepper-emacs' function"
   (cond
