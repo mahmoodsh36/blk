@@ -46,6 +46,10 @@
   ":title is the title/type of the pattern, :filename-regex is the regex to match files to be grepped :anchor-regex is the regex for matching blocks of text that contain the target value which is then passed to :title-function to be turned into the final desired value to be passed to completing-read and that identifies the target, :link-function is the function that gets the id to be used when creating links to the target, the need for :link-function over :title-function is that an id and a name for the target can be different, as an id can be a random sequence but a name could be a more memorable sequence of characters. if the user wants the id to be the name itself, they may only supply :title-function"
   )
 
+(defcustom blk-grep-patterns
+  (list)
+  "the pattern table for grep")
+
 (defcustom blk-rg-patterns
   (list (list :title "titled org file or block"
               :filename-regex ".*\\.org"
@@ -122,10 +126,6 @@
         )
   "the patterns for inserting links, :filename-regex is for matching with filenames, and id-format is for inserting the link into a buffer, %i will be replaced by the target id and %t by the target's title, if existent")
 
-(defcustom blk-patterns
-  blk-rg-patterns
-  "the list of patterns to invoke the grepper with")
-
 (defun blk-value-after-space (str)
   (string-trim (string-join (cdr (split-string str " ")) " ")))
 
@@ -144,21 +144,34 @@
 (defun blk-value-after-space-before-colon (str)
   (string-trim (car (split-string (blk-value-after-space str) ":"))))
 
-(defconst
-  blk-grepper-rg
-  (list :command "rg --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
-        :delimiter "\t"))
-
 (defcustom blk-grepper
-  ;; 'blk-emacs-grep
-  blk-grepper-rg
+  (choose-grepper)
   "the program to use for grepping files, could be a function that takes as arguments the patterns and files, or a string representing a shell command to be formatted with the regex to grep for and the file list")
+
+(defcustom blk-patterns
+  (cl-case (choose-grepper)
+    (blk-grepper-rg blk-rg-patterns)
+    (blk-grepper-grep blk-grep-patterns)
+    (blk-grepper-emacs blk-emacs-patterns))
+  "the list of patterns to invoke the grepper with")
 
 (defconst
   blk-grepper-grep
   '(:command "grep -e '%s' '%s' --no-heading --line-number --ignore-case --byte-offset --only-matching"
              :separator ":"
              :regex-or "|"))
+
+(defconst
+  blk-grepper-rg
+  (list :command "rg --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
+        :delimiter "\t"))
+
+(defun choose-grepper ()
+  "choose a grepper depending on whether it can be found in `exec-path', fall back to the `blk-grepper-emacs' function"
+  (cond
+      ((locate-file "rg" exec-path) blk-grepper-rg)
+      ((locate-file "grep" exec-path) blk-grepper-grep)
+      (_ blk-grepper-emacs)))
 
 (defmacro blk-with-file-as-current-buffer (file &rest body)
   (let ((present-buffer (gensym))
@@ -171,7 +184,7 @@
              (kill-buffer (current-buffer)))
            ,result)))))
 
-(defun blk-emacs-grep (pattern-table files)
+(defun blk-grepper-emacs (pattern-table files)
   (let ((results))
     (dolist (pattern pattern-table)
       (let ((matched-buffers
