@@ -155,20 +155,20 @@
   (list :command "rg --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
         :delimiter "\t"))
 
-;;;###autoload
-(defun choose-grepper ()
+(defun blk-choose-grepper ()
   "choose a grepper depending on whether it can be found in `exec-path', fall back to the `blk-grepper-emacs' function"
   (cond
       ((locate-file "rg" exec-path) blk-grepper-rg)
       ((locate-file "grep" exec-path) blk-grepper-grep)
       (_ blk-grepper-emacs)))
 
+(declare-function blk-choose-grepper "blk")
 (defcustom blk-grepper
-  (choose-grepper)
+  (blk-choose-grepper)
   "the program to use for grepping files, could be a function that takes as arguments the patterns and files, or a string representing a shell command to be formatted with the regex to grep for and the file list")
 
 (defcustom blk-patterns
-  (pcase (choose-grepper)
+  (pcase (blk-choose-grepper)
     (blk-grepper-rg blk-rg-patterns)
     (blk-grepper-grep blk-grep-patterns)
     (blk-grepper-emacs blk-emacs-patterns))
