@@ -53,9 +53,9 @@
            (payload '(:tc-type "org-link")))
       (if result
           (progn
-            ;; for now we cant work with the marker returned unless we have the file open in a buffer4 after the function returns (unfortunately this is how org-transclusion handles things)
+            ;; for now we cant work without keeping the file opened in an emacs buffer (this is how org-transclusion handles things)
             (find-file-noselect (plist-get result :filepath))
-            (blk-with-file-as-current-buffer
+            (with-current-buffer
              (plist-get result :filepath)
              (goto-char (plist-get result :position))
              (append payload
