@@ -4,7 +4,7 @@ notice: im currently still writing the readme so it is incomplete.
 * usage demo
 the "mandatory gif" demo:
 
-https://github.com/mahmoodsheikh36/test/assets/33814416/5e9c16b1-f90b-4fe2-9240-2bef93abcffc
+https://github.com/mahmoodsheikh36/blk/assets/33814416/3676c7b1-6e72-4ae1-a4cc-9b8709a21e65
 
 this is the simplest possible usage, alot more is possible as custom patterns can be defined for any filetype and ~blk~ would take care of the abstract task of linking and navigating the different patterns with the defined ids/titles.
 * introduction
