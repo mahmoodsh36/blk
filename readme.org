@@ -1,5 +1,6 @@
 #+title:      emacs blk package
 #+description: a package for interlinking arbitrary blocks of text, with an emphasis on org mode
+notice: im currently still writing the readme so it is incomplete.
 * usage demo
 the "mandatory gif" demo:
 
