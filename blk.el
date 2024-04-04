@@ -21,6 +21,9 @@
 
 ;;; this package is for making arbitrary links across text files
 
+(require 'subr-x)
+(require 'cl-lib)
+
 (defcustom blk-directories
   (list (expand-file-name "~/notes/")
         (file-name-parent-directory (expand-file-name user-init-file)))
@@ -49,7 +52,6 @@
                                                   "IDENTIFIER"
                                                   (org-collect-keywords '("identifier"))
                                                   nil nil 'string=))
-                                            ;; for org id's (with or without org-roam)
                                             (org-id-get))))))
                       (or id (plist-get grep-data :value)))))))
         (list :title "elisp function"
@@ -115,7 +117,6 @@
                                                   "IDENTIFIER"
                                                   (org-collect-keywords '("identifier"))
                                                   nil nil 'string=))
-                                            ;; for org id's (with or without org-roam)
                                             (org-id-get))))))
                       (or id (plist-get grep-data :value)))))))
         (list :title "elisp function"
@@ -226,6 +227,7 @@
   "the list of patterns to invoke the grepper with")
 
 (defmacro blk-with-file-as-current-buffer (file &rest body)
+  "macro that runs `body' with `file' loaded as the current buffer"
   (let ((present-buffer (gensym))
         (result (gensym)))
     `(let ((,present-buffer (find-buffer-visiting ,file)))
@@ -237,6 +239,7 @@
            ,result)))))
 
 (defun blk-grepper-emacs (pattern-table files)
+  "the emacs grepper function, searches files for the given patterns"
   (let ((results))
     (let ((all-files (cl-union files
                            (remove nil (mapcar 'buffer-file-name (blk-list-buffers))))))
@@ -289,9 +292,11 @@
     files))
 
 (defun blk-list-buffers ()
+  "the function that lists buffers for searching when `blk-grepper-emacs' is used, this simply calls the function `buffer-list', this is done to allow for easy advising of the function if desired"
   (buffer-list))
 
 (defun blk-list-entries ()
+  "list all the matched patterns in the files that we are aware of"
   (let* ((grep-results
           (mapcar
            (lambda (grep-result)
@@ -316,6 +321,7 @@
    str-list))
 
 (defun blk-run-grep-cmd (cmd patterns files)
+  "run the shell command `cmd', which should contain a command of grep (or a grep-like tool)"
   (let ((matches))
     (dolist (pattern patterns)
       (let* ((matching-files (blk-str-list-matches (plist-get pattern :filename-regex) files))

@@ -19,26 +19,28 @@
 
 ;;;###autoload
 (defun blk-configure-org-link ()
+  "create the blk org link type"
   (org-link-set-parameters "blk"
                            :follow #'org-blk-open
                            :export #'org-blk-export))
 
 ;;;###autoload
 (defun blk-configure-org-transclusion ()
+  "auto configure org-transclusion integration with blk"
   (add-to-list 'org-transclusion-add-functions 'org-transclusion-add-blk))
 
 (defun org-blk-open (link _)
-  "open the file containing a block with the name `link'"
+  "open the file containing a block with the id `link'"
   (let ((result (car (blk-find-by-id link))))
     (find-file (plist-get result :filepath))
     (goto-char (plist-get result :position))))
 
 (defun org-blk-export (link desc format)
-  "return the file containing a block with the name `link' for org exporting purposes"
+  "return the file containing a block with the id `link' for org exporting purposes"
   (if (org-blk-find-anchor link)
       (let* ((linked-file (car (blk-find-by-id link)))
              (desc (or desc link))
-             (linked-file-no-ext (file-name-sans-extension (file-name-base linked-file))))
+             (linked-file-no-ext (file-name-sans-extension linked-file)))
         (cond
          ((eq format 'html) (format "<a href=\"%s.html\">%s</a>" linked-file-no-ext desc))
          ((eq format 'md) (format "[%s](%s.md)" desc linked-file-no-ext))
