@@ -1,0 +1,94 @@
+#+title:      emacs blk package
+#+description: a package for interlinking arbitrary blocks of text with an emphasis on org mode
+* usage demo
+the "mandatory gif" demo:
+[[demo.mp4]]
+this is the simplest possible usage, alot more is possible as custom patterns can be defined for any filetype and ~blk~ would take care of the abstract task of linking and navigating the different patterns with the defined ids/titles.
+* introduction
+blk is a very customizable, small package for interlinking arbitrary blocks of text, focused on org mode. as unoriginal and redundant as that may sound, this package doesnt do anything fancy and doesnt try to be anything but a glorified grepper. read on and you shall see how simple yet powerful the philosophy behind this package can be.
+* why
+the idea behind blk is that "grepping" should suffice for most note-taking and text-interlinking related tasks, and anything more sophisticated would introduce complications that make customizability a harder task for users. the main motive for writing this package was my growing frustration with the current state of note-taking packages like ~org-roam~ (it is a great package, this is not to downplay its usefulness and in no way meant as an offense to the people who worked on it, as i feel nothing but appreciation towards the emacs community as a whole), which was of all the most painful to tame to fit a workflow that made sense to me, i considered other alternatives like ~denote~ and ~hyperbole~, but i then settled for a small collection of utility functions which was more than enough and far more extensible than those other alternatives, i eventually decided to put this functionality into a package for it could be useful to others aswell.
+this package doesnt try to introduce any new syntax or restrictions, it merely builds on whats available and tries to be integrable with other available packages or standards. so as to avoid being just another equivalent choice in the long list of available note-taking packages.
+* installation & basic configuration
+basic installation with the basic features
+#+begin_src emacs-lisp :eval no
+  (use-package blk
+    :ensure ( :host github :repo "mahmoodsheikh36/blk") ;; replace with :straight or :quelpa, etc
+    :after (org)
+    :config
+    (setq blk-directories
+          (list (expand-file-name "~/notes")
+                (file-name-parent-directory (expand-file-name user-init-file))))
+    (blk-configure-org-link) ;; required for blk-open-at-point to work
+    (global-set-key (kbd "C-c o") #'blk-open-at-point)
+    (global-set-key (kbd "C-c f") #'blk-find)
+    (global-set-key (kbd "C-c f") #'blk-insert))
+#+end_src
+basic installation with ~org-transclusion~ "integration"
+#+begin_src emacs-lisp :eval no
+  (use-package org-transclusion
+    :config
+    (add-hook 'org-mode-hook #'org-transclusion-mode))
+
+  (use-package blk
+    :ensure ( :host github :repo "mahmoodsheikh36/blk") ;; replace with :straight or :quelpa, etc
+    :after (org org-transclusion)
+    :config
+    (setq blk-directories
+          (list (expand-file-name "~/notes")
+                (file-name-parent-directory (expand-file-name user-init-file))))
+    (blk-configure-org-link)
+    (blk-configure-org-transclusion)
+    (global-set-key (kbd "C-c o") #'blk-open-at-point)
+    (global-set-key (kbd "C-c f") #'blk-find)
+    (global-set-key (kbd "C-c f") #'blk-insert))
+#+end_src
+* basic functionality
+say you have the following block in ~file1.org~:
+#+begin_src org :eval no :exports code
+  ,#+begin_definition :title definition of a set :name def-set
+  a set is defined to be an arbitrary collection of items
+  ,#+end_definition
+#+end_src
+first, since the block has a ~:title~ property it will be listed in the completing-read interface of ~blk-find~ and could be navigated to using its title (like ~org-roam-node-open~ except blk supports not only files or headers but also blocks and other patterns of text)
+now say you have another file ~file2.tex~:
+#+begin_src latex :eval no :exports code
+  this is an example of a set:
+  \begin{equation}\label{set-example1}
+    x = \{10, \emptyset, \{1\}, 3\}
+  \end{equation}
+#+end_src
+and then in another file ~code.el~ what you could do is:
+#+begin_src emacs-lisp :eval no
+  (defun generate-set ()
+    "refer to blk:def-set and blk:set-example1"
+    (list 10 20))
+#+end_src
+if you have ~org-transclusion~ enabled, you can also transclude the pattern the link is defined to link to, e.g. in another file ~file3.org~ you can do
+#+begin_src org
+  ,#+transclude: blk:def-set
+#+end_src
+this will cause the definition block from ~file1.org~ to be "transcluded" (inserted) into the buffer of ~file3.org~ when ~org-transclusion-add-all~ is executed (happens automatically when an org file is opened).
+the text to be transcluded for a specific link is defined by the pattern in ~blk-rg-patterns~ (or ~blk-grep-patterns~, ~blk-emacs-patterns~, etc, if you decide to use another grepper)
+* different greppers
+the greppers available for use are currently the standard ~grep~ or ~ripgrep~ (~rg~), or ~emacs~ itself, only use emacs as the grepper if you really are trying to avoid the dependency of an external grepper as it is an order of magnitude slower than the other options, though it is good to note that the plus side of using emacs as the grepper is that it is aware of unsaved changes to buffers since it greps those instead of the files themselves when they're already opened in buffers.
+for each grepper a different table of patterns is defined, the grepper is chosen by setting the variable ~blk-grepper~ and defaults to ~rg~ and falls back to ~grep~ if ~rg~ isnt installed, and falls back to using emacs if ~grep~ isnt found aswell.
+- ~blk-grepper-rg~ <-> ~blk-rg-patterns~
+- ~blk-grepper-grep~ <-> ~blk-grep-patterns~
+- ~blk-grepper-emacs~ <-> ~blk-emacs-patterns~
+* other packages
+** denote
+~denote~ can be easily used with ~blk~ as their features dont overlap, i myself use denote as a tool to keep my org files names in sync with the in-buffer org settings and ~blk~ to insert/open/navigate links and blocks of text.
+** org-roam
+* extending blk
+** creating custom patterns
+* blk vs interactive grepping
+* todo
+** completion-at-point
+** org-roam backlink buffer integration
+** denote backlink buffer integration
+** patterns for markdown files
+** patterns for file names without needing to grep them (similar to what denote does)
+** efficiency concerns
+** capture templates
+** add support for ~customize~ (customization via the default interface, i.e. without code)
