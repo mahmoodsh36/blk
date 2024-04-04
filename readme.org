@@ -3,6 +3,8 @@
 * usage demo
 the "mandatory gif" demo:
 
+[[https://github.com/mahmoodsheikh36/blk/blob/master/.github/images/demo.mp4|alt=octocat]]
+
 [[demo.mp4]]
 
 this is the simplest possible usage, alot more is possible as custom patterns can be defined for any filetype and ~blk~ would take care of the abstract task of linking and navigating the different patterns with the defined ids/titles.
