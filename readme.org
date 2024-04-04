@@ -3,7 +3,7 @@
 * usage demo
 the "mandatory gif" demo:
 
-[[https://github.com/mahmoodsheikh36/blk/blob/master/.github/images/demo.mp4|alt=octocat]]
+https://github.com/mahmoodsheikh36/blk/blob/master/.github/images/demo.mp4
 
 [[demo.mp4]]
 
