@@ -3,7 +3,7 @@
 * usage demo
 the "mandatory gif" demo:
 
-https://raw.githubusercontent.com/mahmoodsheikh36/blk/main/.github/images/demo.mp4
+https://github.com/mahmoodsheikh36/test/assets/33814416/5e9c16b1-f90b-4fe2-9240-2bef93abcffc
 
 this is the simplest possible usage, alot more is possible as custom patterns can be defined for any filetype and ~blk~ would take care of the abstract task of linking and navigating the different patterns with the defined ids/titles.
 * introduction
