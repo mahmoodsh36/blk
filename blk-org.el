@@ -32,8 +32,11 @@
 (defun org-blk-open (link _)
   "open the file containing a block with the id `link'"
   (let ((result (car (blk-find-by-id link))))
-    (find-file (plist-get result :filepath))
-    (goto-char (plist-get result :position))))
+    (if result
+        (progn
+          (find-file (plist-get result :filepath))
+          (goto-char (plist-get result :position))))
+    (message "id %s not found" link)))
 
 (defun org-blk-export (link desc format)
   "return the file containing a block with the id `link' for org exporting purposes"

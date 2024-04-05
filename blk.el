@@ -35,134 +35,76 @@
   )
 
 (defcustom blk-emacs-patterns
-  (list (list :title "titled org file or block"
-              :filename-regex ".*\\.org"
-              :anchor-regex "\\(:title\\|:alias\\|#\\+title:\\|#\\+alias:\\|#\\+name:\\)\s+[^:]+"
-              :title-function 'blk-value-after-space
-              :extract-id-function
-              (lambda (grep-data)
-                (let ((elm (org-element-at-point)))
-                  (when elm
-                    (let* ((elm-type (org-element-type elm))
-                           (id (cl-case elm-type
-                                 ('special-block (org-element-property :name elm))
-                                 ('keyword (or
-                                            ;; for denote
-                                            (car (alist-get
-                                                  "IDENTIFIER"
-                                                  (org-collect-keywords '("identifier"))
-                                                  nil nil 'string=))
-                                            (org-id-get))))))
-                      (or id (plist-get grep-data :value)))))))
-        (list :title "elisp function"
-              :filename-regex ".*\\.el"
-              :anchor-regex "^(defun\s+[^\s]+"
-              :title-function 'blk-value-after-space)
-        (list :title "org header"
-              :filename-regex ".*\\.org"
-              :anchor-regex "^\\*+ .*"
-              :title-function 'blk-value-after-space
-              :extract-id-function (lambda (grep-data)
-                                     (or (org-id-get) (plist-get grep-result :value))))
-        (list :filename-regex ".*\\.org"
-              :anchor-regex "^:ID:\\s*"
-              :src-id-function 'blk-org-id-value)
-        (list :filename-regex ".*\\.org"
-              :anchor-regex org-link-any-re
-              :dest-id-function 'blk-org-link-path)
-        (list :filename-regex ".*\\.org"
-              :anchor-regex "#\\+identifier:\s+.*"
-              :src-id-function 'blk-value-after-colon)
-        (list :title "latex label"
-              :filename-regex ".*\\.\\(org\\|tex\\)"
-              :anchor-regex "\\\\label{[^\\{\\}]*}"
-              :src-id-function 'blk-latex-label-id)
-        (list :title "id anchor for org named block"
-              :filename-regex ".*\\.org"
-              :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
-              :src-id-function 'blk-value-after-space-before-colon
-              :transclusion-function
-              (lambda (grep-data)
-                (let ((elm (org-element-at-point)))
-                  (when elm
-                    (let* ((elm-type (org-element-type elm)))
-                      (cl-case elm-type
-                        ;; handlers for more cases should be implemented
-                        ('special-block
-                         (list :src-content (buffer-substring (org-element-property :begin elm)
-                                                              (org-element-property :end elm))
-                               :src-buf (current-buffer)
-                               :src-beg (org-element-property :begin elm)
-                               :src-end (org-element-property :end elm))))
-                      )))))
-        )
-  ":title is the title/type of the pattern, :filename-regex is the regex to match files to be grepped :anchor-regex is the regex for matching blocks of text that contain the target value which is then passed to :title-function to be turned into the final desired value to be passed to completing-read and that identifies the target, :link-function is the function that gets the id to be used when creating links to the target, the need for :link-function over :title-function is that an id and a name for the target can be different, as an id can be a random sequence but a name could be a more memorable sequence of characters. if the user wants the id to be the name itself, they may only supply :title-function"
-  )
+  (list
+   (list :title "titled org file or block"
+         :filename-regex ".*\\.org"
+         :anchor-regex "\\(:title\\|:alias\\|#\\+title:\\|#\\+alias:\\|#\\+name:\\)\s+[^:]+"
+         :title-function 'blk-value-after-space
+         :extract-id-function 'blk-org-id-at-point)
+   (list :title "elisp function"
+         :filename-regex ".*\\.el"
+         :anchor-regex "^(defun\s+[^\s]+"
+         :title-function 'blk-value-after-space)
+   (list :title "org header"
+         :filename-regex ".*\\.org"
+         :anchor-regex "^\\*+ .*"
+         :title-function 'blk-value-after-space
+         :extract-id-function 'blk-org-id-at-point)
+   (list :filename-regex ".*\\.org"
+         :anchor-regex "^:ID:\\s*"
+         :src-id-function 'blk-org-id-value)
+   (list :filename-regex ".*\\.org"
+         :anchor-regex org-link-any-re
+         :dest-id-function 'blk-org-link-path)
+   (list :filename-regex ".*\\.org"
+         :anchor-regex "#\\+identifier:\s+.*"
+         :src-id-function 'blk-value-after-colon)
+   (list :title "latex label"
+         :filename-regex ".*\\.\\(org\\|tex\\)"
+         :anchor-regex "\\\\label{[^\\{\\}]*}"
+         :src-id-function 'blk-latex-label-id)
+   (list :title "id anchor for org named block"
+         :filename-regex ".*\\.org"
+         :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
+         :src-id-function 'blk-value-after-space-before-colon
+         :transclusion-function 'blk-org-transclusion-at-point))
+  "the pattern table for the elisp grepper, see documentation for `blk-patterns'")
 
 (defcustom blk-rg-patterns
-  (list (list :title "titled org file or block"
-              :filename-regex ".*\\.org"
-              :anchor-regex "(:title|:alias|#\\+title:|#\\+alias:|#\\+name:)\\s+[^:]+"
-              :title-function 'blk-value-after-space
-              :extract-id-function
-              (lambda (grep-data)
-                (let ((elm (org-element-at-point)))
-                  (when elm
-                    (let* ((elm-type (org-element-type elm))
-                           (id (cl-case elm-type
-                                 ('special-block (org-element-property :name elm))
-                                 ('keyword (or
-                                            ;; for denote
-                                            (car (alist-get
-                                                  "IDENTIFIER"
-                                                  (org-collect-keywords '("identifier"))
-                                                  nil nil 'string=))
-                                            (org-id-get))))))
-                      (or id (plist-get grep-data :value)))))))
-        (list :title "elisp function"
-              :filename-regex ".*\\.el"
-              :anchor-regex "^\\(defun\\s+\\S+"
-              :title-function 'blk-value-after-space)
-        (list :title "org header"
-              :filename-regex ".*\\.org"
-              :anchor-regex "^\\*+\\s.*"
-              :title-function 'blk-value-after-space
-              :extract-id-function (lambda (grep-data)
-                                     (or (org-id-get) (plist-get grep-result :value))))
-        (list :filename-regex ".*\\.org"
-              :anchor-regex "^:ID:\\s*"
-              :src-id-function 'blk-org-id-value)
-        (list :filename-regex ".*\\.org"
-              :anchor-regex "\\[\\[[a-z]+:[^\\[\\]]+\\]\\]|\\[\\[[a-z]+:[^\\[\\]]+\\]\\[[^\\[\\]]+\\]\\]"
-              :dest-id-function 'blk-org-link-path)
-        (list :filename-regex ".*\\.org"
-              :anchor-regex "#\\+identifier:\\s+.*"
-              :src-id-function 'blk-value-after-colon)
-        (list :title "latex label"
-              :filename-regex ".*\\.\\(org\\|tex\\)"
-              :anchor-regex "\\\\\\\\label\\\\{[^\\\\{\\\\}]*\\\\}"
-              ;; :anchor-regex (shell-quote-argument "\\\\label\\{[^\\{\\}]*\\}")
-              :src-id-function 'blk-latex-label-id)
-        (list :title "id anchor for org named block"
-              :filename-regex ".*\\.org"
-              :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
-              :src-id-function 'blk-value-after-space-before-colon
-              :transclusion-function
-              (lambda (grep-data)
-                (let ((elm (org-element-at-point)))
-                  (when elm
-                    (let* ((elm-type (org-element-type elm)))
-                      (cl-case elm-type
-                        ;; handlers for more cases should be implemented
-                        ('special-block
-                         (list :src-content (buffer-substring (org-element-property :begin elm)
-                                                              (org-element-property :end elm))
-                               :src-buf (current-buffer)
-                               :src-beg (org-element-property :begin elm)
-                               :src-end (org-element-property :end elm))))
-                      )))))
-        )
-  "the pattern table for ripgrep")
+  (list
+   (list :title "titled org file or block"
+         :filename-regex ".*\\.org"
+         :anchor-regex "(:title|:alias|#\\+title:|#\\+alias:|#\\+name:)\\s+[^:]+"
+         :title-function 'blk-value-after-space
+         :extract-id-function #'blk-org-id-at-point)
+   (list :title "elisp function"
+         :filename-regex ".*\\.el"
+         :anchor-regex "^\\(defun\\s+\\S+"
+         :title-function 'blk-value-after-space)
+   (list :title "org header"
+         :filename-regex ".*\\.org"
+         :anchor-regex "^\\*+\\s.*"
+         :title-function 'blk-value-after-space
+         :extract-id-function 'blk-org-id-at-point)
+   (list :filename-regex ".*\\.org"
+         :anchor-regex "^:ID:\\s*"
+         :src-id-function 'blk-org-id-value)
+   (list :filename-regex ".*\\.org"
+         :anchor-regex "\\[\\[[a-z]+:[^\\[\\]]+\\]\\]|\\[\\[[a-z]+:[^\\[\\]]+\\]\\[[^\\[\\]]+\\]\\]"
+         :dest-id-function 'blk-org-link-path)
+   (list :filename-regex ".*\\.org"
+         :anchor-regex "#\\+identifier:\\s+.*"
+         :src-id-function 'blk-value-after-colon)
+   (list :title "latex label"
+         :filename-regex ".*\\.\\(org\\|tex\\)"
+         :anchor-regex "\\\\\\\\label\\\\{[^\\\\{\\\\}]*\\\\}"
+         :src-id-function 'blk-latex-label-id)
+   (list :title "id anchor for org named block"
+         :filename-regex ".*\\.org"
+         :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
+         :src-id-function 'blk-value-after-space-before-colon
+         :transclusion-function 'blk-org-transclusion-at-point))
+  "the pattern table for ripgrep, see documentation for `blk-patterns'")
 
 ;; grep -E plays well with rg regex's so as far as i can tell no extra work is needed
 (defcustom blk-grep-patterns
@@ -178,6 +120,45 @@
               :id-format "blk:%i")
         )
   "the patterns for inserting links, :filename-regex is for matching with filenames, and id-format is for inserting the link into a buffer, %i will be replaced by the target id and %t by the target's title, if existent")
+
+(defun blk-org-id-at-point (grep-data)
+  "all in one function to try and get the id to the org element under the cursor, if no id can be found, the value searched for with grep is returned (using the parameter `grep-data'), the returned id/value would be used to link to the element"
+  (let ((elm (org-element-at-point)))
+    (when elm
+      (let* ((elm-type (org-element-type elm))
+             (id (cond
+                  ;; if we are at a block and it has a name, return that, otherwise return the link to the file
+                  ((and (eq elm-type 'special-block)
+                        (org-element-property :name elm))
+                   (org-element-property :name elm))
+                  ;; for links to files, through org-id or denote #+identifier
+                  ((or (eq elm-type 'keyword)
+                       (and (eq elm-type 'special-block)
+                            (not (org-element-property :name elm))))
+                   (or
+                    ;; for denote
+                    (car (alist-get
+                          "IDENTIFIER"
+                          (org-collect-keywords '("identifier"))
+                          nil nil 'string=))
+                    ;; for an org id (with or without org-roam)
+                    (org-id-get)))
+                  ;; if we are at a header, return its id (might return nil or id of file if header doesnt have id)
+                  ((eq elm-type 'headline) (org-id-get)))))
+        (or id (plist-get grep-data :value))))))
+
+(defun blk-org-transclusion-at-point ()
+  (let ((elm (org-element-at-point)))
+    (when elm
+      (let* ((elm-type (org-element-type elm)))
+        (cl-case elm-type
+          ;; handlers for more cases should be implemented
+          ('special-block
+           (list :src-content (buffer-substring (org-element-property :begin elm)
+                                                (org-element-property :end elm))
+                 :src-buf (current-buffer)
+                 :src-beg (org-element-property :begin elm)
+                 :src-end (org-element-property :end elm))))))))
 
 (defun blk-value-after-space (str)
   (string-trim (string-join (cdr (split-string str " ")) " ")))
@@ -214,7 +195,6 @@
       ((locate-file "grep" exec-path) blk-grepper-grep)
       (_ blk-grepper-emacs)))
 
-(declare-function blk-choose-grepper "blk")
 (defcustom blk-grepper
   (blk-choose-grepper)
   "the program to use for grepping files, could be a function that takes as arguments the patterns and files, or a string representing a shell command to be formatted with the regex to grep for and the file list")
@@ -224,7 +204,8 @@
     (blk-grepper-rg blk-rg-patterns)
     (blk-grepper-grep blk-grep-patterns)
     (blk-grepper-emacs blk-emacs-patterns))
-  "the list of patterns to invoke the grepper with")
+  "the list of patterns to invoke the grepper with, each entry should be a plist representing the data of a pattern, :title is the title/type of the pattern (used for completing-read), :filename-regex is the regex to match files to be grepped which should always be an emacs regex because matching files is done in elisp, :anchor-regex is the regex for matching blocks of text that contain the target value which is then passed to :title-function to be turned into the final desired value to be passed to completing-read and that identifies the target, :link-function is the function that gets the id to be used when creating links to the target, the need for :link-function over :title-function is that an id and a name for the target can be different, as an id can be a random sequence but a name could be a more memorable sequence of characters. if the user wants the id to be the name itself, they may only supply :title-function"
+)
 
 (defmacro blk-with-file-as-current-buffer (file &rest body)
   "macro that runs `body' with `file' loaded as the current buffer"
