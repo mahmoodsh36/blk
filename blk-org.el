@@ -40,7 +40,7 @@
 
 (defun org-blk-export (link desc format)
   "return the file containing a block with the id `link' for org exporting purposes"
-  (if (org-blk-find-anchor link)
+  (if (blk-find-by-id link)
       (let* ((linked-file (car (blk-find-by-id link)))
              (desc (or desc link))
              (linked-file-no-ext (file-name-sans-extension linked-file)))
