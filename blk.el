@@ -147,7 +147,7 @@
                   ((eq elm-type 'headline) (org-id-get)))))
         (or id (plist-get grep-data :value))))))
 
-(defun blk-org-transclusion-at-point ()
+(defun blk-org-transclusion-at-point (grep-data)
   (let ((elm (org-element-at-point)))
     (when elm
       (let* ((elm-type (org-element-type elm)))

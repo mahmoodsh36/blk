@@ -61,7 +61,7 @@
             ;; for now we cant work without keeping the file opened in an emacs buffer (this is how org-transclusion handles things)
             (find-file-noselect (plist-get result :filepath))
             (with-current-buffer
-             (plist-get result :filepath)
+             (find-buffer-visiting (plist-get result :filepath))
              (goto-char (plist-get result :position))
              (append payload
                      (funcall (plist-get (plist-get result :matched-pattern) :transclusion-function) result))))
