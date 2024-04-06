@@ -151,9 +151,9 @@
   (let ((elm (org-element-at-point)))
     (when elm
       (let* ((elm-type (org-element-type elm)))
-        (cl-case elm-type
-          ;; handlers for more cases should be implemented
-          ('special-block
+        (cond
+          ;; handler for custom/src org-blocks
+          ((or (eq elm-type 'special-block) (eq elm-type 'src-block))
            (list :src-content (buffer-substring (org-element-property :begin elm)
                                                 (org-element-property :end elm))
                  :src-buf (current-buffer)
