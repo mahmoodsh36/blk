@@ -170,7 +170,7 @@
   (caddr (split-string org-id-text ":")))
 
 (defun blk-value-after-colon (text)
-  (cadr (split-string text ":")))
+  (string-trim (cadr (split-string text ":"))))
 
 (defun blk-latex-label-id (text)
   (car (split-string (cadr (split-string text "{")) "}")))
