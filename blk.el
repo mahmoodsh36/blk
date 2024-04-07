@@ -1,8 +1,12 @@
-;; Copyright (C) 2024  Mahmood Sheikh
+;;; blk.el --- Rapidly create and follow links across text files  -*- lexical-binding: t; -*-
 
-;; Author: mahmood sheikh <mahmod.m2015@gmail.com>
+;; Author: Mahmood Sheikh <mahmod.m2015@gmail.com>
 ;; Keywords: lisp
-;; Version: 0.0.1
+;; Version: 0.0.2
+
+;; Copyright (C) 2024  Mahmood Sheikh and Bob Weiner
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -18,21 +22,19 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
+;; This package is for making arbitrary links across text files.
 
-;;; this package is for making arbitrary links across text files
-
+;;; Code:
 (require 'subr-x)
 (require 'cl-lib)
 
-(defcustom blk-directories
-  (list (expand-file-name "~/notes/")
-        (file-name-parent-directory (expand-file-name user-init-file)))
-  "directories to look for files in")
+(defcustom blk-directories (list (expand-file-name "~/notes/")
+				 (file-name-parent-directory (expand-file-name user-init-file)))
+  "Blk directories within which to find files to insert and search for links.")
 
-(defcustom blk-list-directories-recursively
-  nil
-  "whether to look for files recursively in `blk-directories', if set to `t' may have severe consequences on speed"
-  )
+(defcustom blk-list-directories-recursively nil
+  "Non-nil means look for files recursively in `blk-directories'.
+Default is nil; changing it may have severe consequences on speed.")
 
 (defcustom blk-emacs-patterns
   (list
@@ -51,7 +53,7 @@
          :title-function 'blk-value-after-space
          :extract-id-function 'blk-org-id-at-point)
    (list :filename-regex ".*\\.org"
-         :anchor-regex "^:ID:\\s*"
+         :anchor-regex "^:ID:\\s*.*"
          :src-id-function 'blk-org-id-value)
    (list :filename-regex ".*\\.org"
          :anchor-regex org-link-any-re
@@ -68,7 +70,7 @@
          :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
          :src-id-function 'blk-value-after-space-before-colon
          :transclusion-function 'blk-org-transclusion-at-point))
-  "the pattern table for the elisp grepper, see documentation for `blk-patterns'")
+  "The pattern table for the elisp grepper; see documentation for `blk-patterns'.")
 
 (defcustom blk-rg-patterns
   (list
@@ -87,7 +89,7 @@
          :title-function 'blk-value-after-space
          :extract-id-function 'blk-org-id-at-point)
    (list :filename-regex ".*\\.org"
-         :anchor-regex "^:ID:\\s*"
+         :anchor-regex "^:ID:\\s*.*"
          :src-id-function 'blk-org-id-value)
    (list :filename-regex ".*\\.org"
          :anchor-regex "\\[\\[[a-z]+:[^\\[\\]]+\\]\\]|\\[\\[[a-z]+:[^\\[\\]]+\\]\\[[^\\[\\]]+\\]\\]"
@@ -104,25 +106,31 @@
          :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
          :src-id-function 'blk-value-after-space-before-colon
          :transclusion-function 'blk-org-transclusion-at-point))
-  "the pattern table for ripgrep, see documentation for `blk-patterns'")
+  "The pattern table for ripgrep; see documentation for `blk-patterns'.")
 
 ;; grep -E plays well with rg regex's so as far as i can tell no extra work is needed
 (defcustom blk-grep-patterns
   blk-rg-patterns
   "the pattern table for grep")
 
+;; Support insertion into editable non-file buffers too.
 (defcustom blk-insert-patterns
-  (list (list :filename-regex ".*\\.org"
-              :id-format "[[blk:%i][%t]]")
-        (list :filename-regex ".*\\.tex"
+  (list (list :mode-list '(auctex-mode latex-mode tex-mode)
               :id-format "\\ref{blk:%i}")
-        (list :filename-regex ".*\\.el"
-              :id-format "blk:%i")
-        )
-  "the patterns for inserting links, :filename-regex is for matching with filenames, and id-format is for inserting the link into a buffer, %i will be replaced by the target id and %t by the target's title, if existent")
+	;; By default, match to any other major-mode
+	(list :mode-list nil
+              :id-format "[[blk:%o]]"))
+  "The patterns for inserting links.
+:mode-list is for matching buffer major modes.
+id-format is for inserting the link into a buffer.
+%i will be replaced by the target id.
+%o will be use Org link format to include both the id and title, when given.
+%t will be replaced by the target title, when given.")
 
 (defun blk-org-id-at-point (grep-data)
-  "all in one function to try and get the id to the org element under the cursor, if no id can be found, the value searched for with grep is returned (using the parameter `grep-data'), the returned id/value would be used to link to the element"
+  "Get the id to the org element at point.
+If no id can be found, interactively select one from the results of
+calling grep using GREP-DATA."
   (let ((elm (org-element-at-point)))
     (when elm
       (let* ((elm-type (org-element-type elm))
@@ -164,16 +172,16 @@
   (string-trim (string-join (cdr (split-string str " ")) " ")))
 
 (defun blk-org-link-path (org-link-text)
-   (car (split-string (cadr (split-string org-link-text ":")) "]")))
+  (string-trim (car (split-string (cadr (split-string org-link-text ":")) "]"))))
 
 (defun blk-org-id-value (org-id-text)
-  (caddr (split-string org-id-text ":")))
+  (string-trim (caddr (split-string org-id-text ":"))))
 
 (defun blk-value-after-colon (text)
   (string-trim (cadr (split-string text ":"))))
 
 (defun blk-latex-label-id (text)
-  (car (split-string (cadr (split-string text "{")) "}")))
+  (string-trim (car (split-string (cadr (split-string text "{")) "}"))))
 
 (defun blk-value-after-space-before-colon (str)
   (string-trim (car (split-string (blk-value-after-space str) ":"))))
@@ -189,7 +197,8 @@
         :delimiter "\t"))
 
 (defun blk-choose-grepper ()
-  "choose a grepper depending on whether it can be found in `exec-path', fall back to the `blk-grepper-emacs' function"
+  "Choose a blk grepper based on a search of `exec-path'.
+If none are found, default to the `blk-grepper-emacs' function."
   (cond
       ((locate-file "rg" exec-path) blk-grepper-rg)
       ((locate-file "grep" exec-path) blk-grepper-grep)
@@ -197,18 +206,35 @@
 
 (defcustom blk-grepper
   (blk-choose-grepper)
-  "the program to use for grepping files, could be a function that takes as arguments the patterns and files, or a string representing a shell command to be formatted with the regex to grep for and the file list")
+  "The program for blk to use for grepping files.
+Could be a function that takes as arguments the patterns and files, or
+a string representing a shell command to be formatted with the regex
+to grep for, together with the file list.")
 
 (defcustom blk-patterns
   (pcase (blk-choose-grepper)
     (blk-grepper-rg blk-rg-patterns)
     (blk-grepper-grep blk-grep-patterns)
     (blk-grepper-emacs blk-emacs-patterns))
-  "the list of patterns to invoke the grepper with, each entry should be a plist representing the data of a pattern, :title is the title/type of the pattern (used for completing-read), :filename-regex is the regex to match files to be grepped which should always be an emacs regex because matching files is done in elisp, :anchor-regex is the regex for matching blocks of text that contain the target value which is then passed to :title-function to be turned into the final desired value to be passed to completing-read and that identifies the target, :link-function is the function that gets the id to be used when creating links to the target, the need for :link-function over :title-function is that an id and a name for the target can be different, as an id can be a random sequence but a name could be a more memorable sequence of characters. if the user wants the id to be the name itself, they may only supply :title-function"
-)
+  "The list of patterns to use with the blk grepper.
+Each entry should be a plist representing the data of a pattern:
+  :title is the title/type of the pattern (used for completing-read)
+  :filename-regex is the regex to match files to be grepped; this
+    should always be an emacs regex because matching files is done in
+    Elisp.
+  :anchor-regex is the regex for matching blocks of text that contain
+    the target value which is then passed to :title-function to be
+    turned into the final desired value to be passed to completing-read
+    and that identifies the target
+  :link-function is the function that gets the id to be used when
+    creating links to the target; the need for :link-function over
+    :title-function is that an id and a name for the target can be
+    different, as an id can be a random sequence but a name could be
+    a more memorable sequence of characters
+  :title-function is used alone to make the id be the name itself.")
 
 (defmacro blk-with-file-as-current-buffer (file &rest body)
-  "macro that runs `body' with `file' loaded as the current buffer"
+  "Macro that reads FILE into the current buffer and executes BODY."
   (let ((present-buffer (gensym))
         (result (gensym)))
     `(let ((,present-buffer (find-buffer-visiting ,file)))
@@ -220,7 +246,7 @@
            ,result)))))
 
 (defun blk-grepper-emacs (pattern-table files)
-  "the emacs grepper function, searches files for the given patterns"
+  "Function that reads patterns from PATTERN-TABLE and greps for them in FILES."
   (let ((results))
     (let ((all-files (cl-union files
                            (remove nil (mapcar 'buffer-file-name (blk-list-buffers))))))
@@ -251,7 +277,7 @@
     results))
 
 (defun blk-string-search-regex (regex str)
-  "returns matches of `regex' found in the string `str', a list with conses of the form (match . position) is returned"
+  "Return matches of REGEX found in STR as a list of conses of the form (match . position)."
   (let ((pos 0)
         (matches))
     (cl-loop for match-pos = (string-match regex str pos)
@@ -261,23 +287,26 @@
     matches))
 
 (defun blk-list-files ()
-  "list the directories `blk-directories' to use for grepping links/references"
+  "Return a list of files in `blk-directories' for grepping links/references.
+Recurse subdirectories if `blk-list-directories-recursively' is non-nil."
   (let ((files))
     (dolist (dir blk-directories)
       (setq files (append files (if blk-list-directories-recursively
-                                    (mapcar (lambda (filename) (concat dir "/" filename))
+                                    (mapcar (lambda (filename) (expand-file-name filename dir))
                                             (directory-files-recursively dir ""))
                                   (mapcar (lambda (filename)
-                                            (concat dir "/" filename))
+					    (expand-file-name filename dir))
                                           (directory-files dir))))))
     files))
 
 (defun blk-list-buffers ()
-  "the function that lists buffers for searching when `blk-grepper-emacs' is used, this simply calls the function `buffer-list', this is done to allow for easy advising of the function if desired"
+  "List buffers for searching when `blk-grepper-emacs' is used.
+This calls the function `buffer-list' to allow for easy advising of
+the function if desired."
   (buffer-list))
 
 (defun blk-list-entries ()
-  "list all the matched patterns in the files that we are aware of"
+  "List all the pattern matches found in the blk files."
   (let* ((grep-results
           (mapcar
            (lambda (grep-result)
@@ -295,41 +324,59 @@
     entries))
 
 (defun blk-str-list-matches (regex str-list)
-  "get the strings from `str-list' matching the regex `regex'"
+  "Return a list of the strings matching REGEX in STR-LIST."
   (cl-remove-if-not
    (lambda (str)
      (string-match regex str))
    str-list))
 
 (defun blk-run-grep-cmd (cmd patterns files)
-  "run the shell command `cmd', which should contain a command of grep (or a grep-like tool)"
-  (let ((matches))
+  "Run a grep-like CMD matching any PATTERNS across a list of FILES.
+Return a list of lists of key-value pairs of the form:
+  '(:value <value>
+    :position <buffer-position>
+    :line-number <line-number>
+    :matched-pattern <grep-pattern>
+    :filepath <filepath>)."
+  (let (files-str
+        full-cmd
+	matches
+	matching-files
+        out
+	sep
+        line-entries
+        filepath
+        line-number
+        position
+        match-text)
     (dolist (pattern patterns)
-      (let* ((matching-files (blk-str-list-matches (plist-get pattern :filename-regex) files))
-             (files-str (string-join (mapcar 'shell-quote-argument matching-files) " "))
-             (full-cmd (format-spec (plist-get cmd :command)
+      (setq matching-files (blk-str-list-matches (plist-get pattern :filename-regex) files))
+      (when matching-files
+	(setq files-str (string-join (mapcar 'shell-quote-argument matching-files) " ")
+	      full-cmd (format-spec (plist-get cmd :command)
                                     `((?f . ,files-str)
-                                      (?r . ,(plist-get pattern :anchor-regex)))))
-             (out (shell-command-to-string full-cmd))
-             (sep (plist-get cmd :delimiter)))
-        (dolist (line (split-string out "\n"))
+                                      (?r . ,(plist-get pattern :anchor-regex))))
+              out (shell-command-to-string full-cmd)
+	      sep (plist-get cmd :delimiter))
+	(dolist (line (split-string out "\n"))
           (when (not (string-empty-p line))
-            (let* ((line-entries (split-string line sep))
-                   (filepath (car line-entries))
-                   (line-number (string-to-number (cadr line-entries)))
-                   (position (string-to-number (caddr line-entries)))
-                   (match-text (string-join (cdddr line-entries) sep)))
-              (push (list :value match-text
-                          :position (1+ position) ;; grep starts at position 0, while emacs doesnt
-                          :line-number line-number
-                          :matched-pattern pattern
-                          :filepath filepath)
-                    matches))))))
+            (setq line-entries (split-string line sep)
+		  filepath (car line-entries)
+                  line-number (string-to-number (or (cadr line-entries) "1"))
+		  position (string-to-number (or (caddr line-entries) "0"))
+		  match-text (if (cdddr line-entries) (string-join (cdddr line-entries) sep) ""))
+	    (push (list :value match-text
+			:position (1+ position) ;; grep starts at position 0, while emacs doesnt
+			:line-number line-number
+			:matched-pattern pattern
+			:filepath filepath)
+		  matches)))))
     matches))
 
 ;;;###autoload
 (defun blk-find (text)
-  "find entries defined by patterns in `blk-patterns' using the grepper `blk-grepper', when found, visit it"
+  "Find entries defined by patterns in `blk-patterns' using the grepper `blk-grepper'.
+Select one and visit it."
   (interactive
    (list (let* ((minibuffer-allow-text-properties t)
                 (entries (blk-list-entries))
@@ -349,40 +396,58 @@
     (message "%s not found" text)))
 
 (defun blk-insert (text)
-  "insert a link to entries defined by patterns in `blk-patterns' using the grepper `blk-grepper', when found, visit it, the pattern of the link is defined by entries in `blk-insert-patterns'"
+  "Insert a link at point to an entry defined by the patterns in `blk-patterns'.
+Use the grepper given by `blk-grepper'.  The link format is defined by
+entries in `blk-insert-patterns'."
   (interactive
-   (list (let ((minibuffer-allow-text-properties t))
-           (completing-read "entry " (blk-list-entries)))))
+   (progn (barf-if-buffer-read-only)
+	  (list (let ((minibuffer-allow-text-properties t))
+		  (completing-read "entry " (blk-list-entries))))))
+  (barf-if-buffer-read-only)
   (if (get-text-property 0 'grep-data text)
       (let* ((grep-data (get-text-property 0 'grep-data text))
              (grep-pattern (plist-get grep-data :matched-pattern))
-             (id-pattern (cl-find-if (lambda (id-pattern)
-                                       (string-match (plist-get id-pattern :filename-regex)
-                                                     buffer-file-name))
-                                     blk-insert-patterns))
-             (extract-id-func (plist-get grep-pattern :extract-id-function)))
+             (id-pattern (or (cl-find-if (lambda (id-pattern)
+					   (apply #'derived-mode-p (plist-get id-pattern :mode-list)))
+					 blk-insert-patterns)
+			     (cl-find-if (lambda (id-pattern)
+					   ;; Use default pattern, ;; mode-list = nil,
+					   ;; meaning match to any other mode.
+					   (null (plist-get id-pattern :mode-list)))
+					 blk-insert-patterns)))
+             (extract-id-func (plist-get grep-pattern :extract-id-function))
+	     (text-no-properties (substring-no-properties text)))
         (if extract-id-func
             (let ((id (blk-with-file-as-current-buffer
                        (plist-get grep-data :filepath)
                        (goto-char (plist-get grep-data :position))
                        (funcall extract-id-func grep-data))))
               (if id
-                  (progn (insert (format-spec (plist-get id-pattern :id-format)
-                                          `((?t . ,(substring-no-properties text))
-                                            (?i . ,id)))))
-                (message "match has no id")))
-          (message "pattern has no extract-id-function")))
+                  (progn (if (plist-get id-pattern :id-format)
+			     (insert (format-spec (plist-get id-pattern :id-format)
+						  `((?i . ,id)
+						    ;; Org [[link]] or [[link][title]] format
+						    (?o . ,(if (equal id text-no-properties)
+							       id
+							     (concat id "][" text-no-properties)))
+						    (?t . ,text-no-properties))))
+			   (message "No link format match for major-mode found in `blk-insert-patterns'")))
+                (message "Match has no id")))
+          (message "Pattern has no `extract-id-function'")))
     (message "%s not found" text)))
 
 (defun blk-grep (grepper patterns files)
-  "run the grepper on the given patterns and files, `greper' could be a function that takes in the pattern tables and files as arguments, see `blk-grepper-emacs', or a property list describing a shell command, see `blk-grepper-grep', `blk-grepper-grep'"
+  "Run the blk grepper on the given patterns and files,
+`grepper' can be a function that takes in the pattern tables and files
+as arguments; see `blk-grepper-emacs'.  Alternatively, it may be a
+property list describing a shell command, see `blk-grepper-grep',"
   (if (functionp grepper)
       (funcall grepper patterns files)
     (when (listp grepper)
       (blk-run-grep-cmd grepper patterns files))))
 
 (defun blk-find-links-to-id (id)
-  "find links that point to `id'"
+  "Find links that point to ID."
   (let* ((id-patterns
           (cl-remove-if
            (lambda (pattern)
@@ -398,14 +463,11 @@
                          :target-id
                          (funcall (plist-get (plist-get grep-result :matched-pattern) :id-function)
                                   (plist-get grep-result :value))))
-            (blk-grep
-             blk-grepper
-             id-patterns
-             (blk-list-files))))))
+            (blk-grep blk-grepper id-patterns (blk-list-files))))))
     grep-results))
 
 (defun blk-find-by-id (id)
-  "find by `id', if a pattern and entry are matched"
+  "Return the file and position of a blk link ID."
   (let* ((id-patterns
           (cl-remove-if-not
            (lambda (pattern)
@@ -421,10 +483,7 @@
                          :id
                          (funcall (plist-get (plist-get grep-result :matched-pattern) :src-id-function)
                                   (plist-get grep-result :value))))
-            (blk-grep
-             blk-grepper
-             id-patterns
-             (blk-list-files))))))
+            (blk-grep blk-grepper id-patterns (blk-list-files))))))
     grep-results))
 
 (require 'blk-org)
