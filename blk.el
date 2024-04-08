@@ -64,7 +64,9 @@ Default is nil; changing it may have severe consequences on speed.")
    (list :title "latex label"
          :filename-regex ".*\\.\\(org\\|tex\\)"
          :anchor-regex "\\\\label{[^\\{\\}]*}"
-         :src-id-function 'blk-latex-label-id)
+         :src-id-function 'blk-latex-label-id
+         :title-function 'blk-latex-label-id
+         :transclusion-function 'blk-tex-transclusion-env-at-point)
    (list :title "id anchor for org named block"
          :filename-regex ".*\\.org"
          :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
@@ -100,7 +102,9 @@ Default is nil; changing it may have severe consequences on speed.")
    (list :title "latex label"
          :filename-regex ".*\\.\\(org\\|tex\\)"
          :anchor-regex "\\\\\\\\label\\\\{[^\\\\{\\\\}]*\\\\}"
-         :src-id-function 'blk-latex-label-id)
+         :src-id-function 'blk-latex-label-id
+         :title-function 'blk-latex-label-id
+         :transclusion-function 'blk-tex-transclusion-env-at-point)
    (list :title "id anchor for org named block"
          :filename-regex ".*\\.org"
          :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
@@ -153,9 +157,12 @@ calling grep using GREP-DATA."
                     (org-id-get)))
                   ;; if we are at a header, return its id (might return nil or id of file if header doesnt have id)
                   ((eq elm-type 'headline) (org-id-get)))))
-        (or id (plist-get grep-data :value))))))
+        (or id (plist-get grep-data :matched-value))))))
 
 (defun blk-org-transclusion-at-point (grep-data)
+  "Function that return a DWIM org-transclusion plist.
+the plist returned represents an org-transclusion object which is then passed to
+org-transclusion to be handled for transclusion in an org buffer."
   (let ((elm (org-element-at-point)))
     (when elm
       (let* ((elm-type (org-element-type elm)))
@@ -167,6 +174,37 @@ calling grep using GREP-DATA."
                  :src-buf (current-buffer)
                  :src-beg (org-element-property :begin elm)
                  :src-end (org-element-property :end elm))))))))
+
+(defun blk-org-src-id (grep-data)
+  "A function that returns the src id given by the :src-id-function of the match found in GREP-DATA, which is the result of the search"
+    (plist-get :))
+
+(defun blk-tex-transclusion-env-at-point (grep-data)
+  "Function that returns the latex environment the cursor is in.
+the plist returned represents an org-transclusion object which is then passed to
+org-transclusion to be handled for transclusion in an org buffer.
+this currently doesnt do anything being looking for the regex corresponding
+to a \\begin and \\end, which isnt the smartest way of doing it, but as long
+as the destination \\label{ID} is present in a latex environment the function
+works as intended. syntax like \\[ \\] isnt yet handled.
+the argument GREP-DATA is the result returned from the search for ID
+it is unused and may be ignored, but since the function is called with it
+we have to keep it defined this way.
+the function makes use of `org-latex-regexps', but it doesnt necessarily
+depend on org-mode as it may work outside org-mode, since org-mode is builtin
+we can safely assume the variable is there.
+returns a plist that is then passed to org-transclusion"
+  (condition-case err
+      (progn (search-backward "\\begin{")
+             (let ((begin (point)))
+               (re-search-forward "\\\\end{[^{}]+}")
+               (goto-char (match-end 0))
+               (let ((end (point)))
+                 (list :src-content (buffer-substring begin end)
+                       :src-buf (current-buffer)
+                       :src-beg begin
+                       :src-end end))))
+    (error nil)))
 
 (defun blk-value-after-space (str)
   (string-trim (string-join (cdr (split-string str " ")) " ")))
@@ -220,18 +258,25 @@ to grep for, together with the file list.")
 Each entry should be a plist representing the data of a pattern:
   :title is the title/type of the pattern (used for completing-read)
   :filename-regex is the regex to match files to be grepped; this
-    should always be an emacs regex because matching files is done in
+    should always be an emacs regex because matching filenames is done in
     Elisp.
   :anchor-regex is the regex for matching blocks of text that contain
     the target value which is then passed to :title-function to be
     turned into the final desired value to be passed to completing-read
-    and that identifies the target
-  :link-function is the function that gets the id to be used when
-    creating links to the target; the need for :link-function over
-    :title-function is that an id and a name for the target can be
+    to serve as the entry in the completing-read menu for the target
+  :src-id-function is the function that gets the id to be used when
+    creating links to the target; the need for :src-id-function over
+    :title-function is that an id and a name/title for a target can be
     different, as an id can be a random sequence but a name could be
-    a more memorable sequence of characters
-  :title-function is used alone to make the id be the name itself.")
+    a more memorable sequence of characters.  the function takes the matched
+    value and strips unnecessary turning it into just the id,
+    think \\label{my-id} -> my-id
+  :title-function is used alone to make the id be the name itself.
+  :transclusion-function currently is a function that should take
+    the match and return an object or plist that can be handled by
+    org-transclusion, this allows for easily defining custom transclusion
+    functions for different patterns of text.  see the function
+    `blk-org-trancslusion-at-point' for an example")
 
 (defmacro blk-with-file-as-current-buffer (file &rest body)
   "Macro that reads FILE into the current buffer and executes BODY."
@@ -271,7 +316,7 @@ Each entry should be a plist representing the data of a pattern:
                   (dolist (match matches)
                     (push (list :position (1+ (cdr match))
                                 :filepath filepath
-                                :value (car match)
+                                :matched-value (car match)
                                 :matched-pattern pattern)
                           results)))))))))
     results))
@@ -311,15 +356,15 @@ the function if desired."
           (mapcar
            (lambda (grep-result)
              (plist-put grep-result
-                        :value
+                        :title      ;; :title of match not to be confused with :title of the matched pattern
                         (funcall (plist-get (plist-get grep-result :matched-pattern) :title-function)
-                                 (plist-get grep-result :value))))
+                                 (plist-get grep-result :matched-value))))
            (blk-grep
             blk-grepper
             (cl-remove-if-not (lambda (pattern) (plist-get pattern :title-function)) blk-patterns)
             (blk-list-files))))
          (entries (mapcar (lambda (grep-result)
-                            (propertize (plist-get grep-result :value) 'grep-data grep-result))
+                            (propertize (plist-get grep-result :title) 'grep-data grep-result))
                           grep-results)))
     entries))
 
@@ -333,7 +378,7 @@ the function if desired."
 (defun blk-run-grep-cmd (cmd patterns files)
   "Run a grep-like CMD matching any PATTERNS across a list of FILES.
 Return a list of lists of key-value pairs of the form:
-  '(:value <value>
+  '(:matched-value <value>
     :position <buffer-position>
     :line-number <line-number>
     :matched-pattern <grep-pattern>
@@ -365,7 +410,7 @@ Return a list of lists of key-value pairs of the form:
                   line-number (string-to-number (or (cadr line-entries) "1"))
 		  position (string-to-number (or (caddr line-entries) "0"))
 		  match-text (if (cdddr line-entries) (string-join (cdddr line-entries) sep) ""))
-	    (push (list :value match-text
+	    (push (list :matched-value match-text
 			:position (1+ position) ;; grep starts at position 0, while emacs doesnt
 			:line-number line-number
 			:matched-pattern pattern
@@ -417,6 +462,16 @@ entries in `blk-insert-patterns'."
 					 blk-insert-patterns)))
              (extract-id-func (plist-get grep-pattern :extract-id-function))
 	     (text-no-properties (substring-no-properties text)))
+        ;; if :extract-id-function isnt provided, we could try making our own that simply
+        ;; returns the "src id" of the target to be linked to, although notice that if this is to
+        ;; happen, the file might be later loaded into memory for no reason by `blk-with-file-as-current-buffer'
+        (when (not extract-id-func)
+          (let ((src-id-func (plist-get (plist-get grep-data :matched-pattern) :src-id-function)))
+            (when src-id-func
+                (setq extract-id-func
+                      (lambda (grep-data-local)
+                        ;; `grep-data-local' would be the same as `grep-data' anyway
+                        (funcall src-id-func (plist-get grep-data-local :matched-value)))))))
         (if extract-id-func
             (let ((id (blk-with-file-as-current-buffer
                        (plist-get grep-data :filepath)
@@ -433,7 +488,7 @@ entries in `blk-insert-patterns'."
 						    (?t . ,text-no-properties))))
 			   (message "No link format match for major-mode found in `blk-insert-patterns'")))
                 (message "Match has no id")))
-          (message "Pattern has no `extract-id-function'")))
+          (message "Pattern has no `extract-id-function' or `src-id-function'")))
     (message "%s not found" text)))
 
 (defun blk-grep (grepper patterns files)
@@ -462,7 +517,7 @@ property list describing a shell command, see `blk-grepper-grep',"
               (plist-put grep-result
                          :target-id
                          (funcall (plist-get (plist-get grep-result :matched-pattern) :id-function)
-                                  (plist-get grep-result :value))))
+                                  (plist-get grep-result :matched-value))))
             (blk-grep blk-grepper id-patterns (blk-list-files))))))
     grep-results))
 
@@ -482,7 +537,7 @@ property list describing a shell command, see `blk-grepper-grep',"
               (plist-put grep-result
                          :id
                          (funcall (plist-get (plist-get grep-result :matched-pattern) :src-id-function)
-                                  (plist-get grep-result :value))))
+                                  (plist-get grep-result :matched-value))))
             (blk-grep blk-grepper id-patterns (blk-list-files))))))
     grep-results))
 

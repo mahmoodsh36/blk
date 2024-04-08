@@ -100,7 +100,7 @@ for each grepper a different table of patterns is defined, the grepper is chosen
 
 * other packages
 ** denote
-~denote~ can be easily used with ~blk~ as their features dont overlap, i myself use denote as a tool to keep my org files names in sync with the in-buffer org settings and ~blk~ to insert/open/navigate links and blocks of text.
+~denote~ can be easily used with ~blk~ as their features dont overlap, personally, i use denote as a tool to keep my org files names in sync with the in-buffer org settings and ~blk~ to insert/open/navigate links and blocks of text.
 ** org-roam
 * extending blk
 ** creating custom patterns
