@@ -133,6 +133,59 @@ id-format is for inserting the link into a buffer.
 %o will be use Org link format to include both the id and title, when given.
 %t will be replaced by the target title, when given.")
 
+(defcustom
+  blk-tex-env-at-point-function
+  #'blk-naive-env-at-point-bounds
+  "Could be one of `blk-auctex-env-at-point-bounds', `blk-naive-env-at-point-bounds' (the former
+maybe be more \"sophisticated\"). has to be a function that returns a cons of the from
+(beginning . end) for the start/end position of the latex environment at point, respectively.
+used for transclusion of latex environments")
+
+(defun blk-auctex-env-at-point-bounds ()
+  "Get the boundaries of the latex environment at point using auctex, errors out if
+auctex isnt installed and loaded. errors out if theres no latex environment at point.
+Returns a cons of the from (beginning . end) for the start/end position of the latex environment
+at point, respectively."
+  (LaTeX-find-matching-begin)
+  (let ((begin (point)))
+    (forward-char) ;; without this auctex cant find \end{} for some reason
+    (LaTeX-find-matching-end)
+    (cons begin (point))))
+
+(defun blk-naive-env-at-point-bounds ()
+  "Get the boundaries of the latex environment at point using a simple regex search,
+Returns a cons of the from (beginning . end) for the start/end position of the latex environment
+at point, respectively. errors out if it fails to find a latex environment."
+  (progn (search-backward "\\begin{")
+         (let ((begin (point)))
+           (re-search-forward "\\\\end{[^{}]+}")
+           (goto-char (match-end 0))
+           (let ((end (point)))
+             (cons begin end)))))
+
+(defun blk-tex-transclusion-env-at-point (grep-data)
+  "Function that returns the latex environment the cursor is in.
+the plist returned represents an org-transclusion object which is then passed to
+org-transclusion to be handled for transclusion in an org buffer.
+this currently doesnt do anything being looking for the regex corresponding
+to a \\begin and \\end, which isnt the smartest way of doing it, but as long
+as the destination \\label{ID} is present in a latex environment the function
+works as intended. syntax like \\[ \\] isnt yet handled.
+the argument GREP-DATA is the result returned from the search for ID
+it is unused and may be ignored, but since the function is called with it
+we have to keep it defined this way.
+the function makes use of `org-latex-regexps', but it doesnt necessarily
+depend on org-mode as it may work outside org-mode, since org-mode is builtin
+we can safely assume the variable is there.
+returns a plist that is then passed to org-transclusion"
+  (let ((bounds (funcall blk-tex-env-at-point-function))
+        (begin (car bounds))
+        (end (cdr bounds))))
+  (list :src-content (buffer-substring begin end)
+        :src-buf (current-buffer)
+        :src-beg begin
+        :src-end end))
+
 (defun blk-tex-transclusion-env-at-point (grep-data)
   "Function that returns the latex environment the cursor is in.
 the plist returned represents an org-transclusion object which is then passed to
@@ -336,7 +389,11 @@ Return a list of lists of key-value pairs of the form:
     :position <buffer-position>
     :line-number <line-number>
     :matched-pattern <grep-pattern>
-    :filepath <filepath>)."
+    :filepath <filepath>).
+CMD is a plist where :command is the shell command and :delimiter is the delimiter in the output,
+see `blk-grepper-grep' for an example
+The result of CMD should contain lines of the form [filepath]<sep>[line]<sep>[position]<sep>[match] where
+sep is the property :delimiter of the plist CMD"
   (let (files-str
         full-cmd
 	matches
