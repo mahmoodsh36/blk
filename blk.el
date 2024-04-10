@@ -552,5 +552,38 @@ property list describing a shell command, see `blk-grepper-grep',"
             (blk-grep blk-grepper id-patterns (blk-list-files))))))
     grep-results))
 
+(defun blk-collect-all ()
+  "Collect some data about the text files that we know of."
+  (mapcar
+   (lambda (grep-result)
+     (let* ((pattern (plist-get grep-result :matched-pattern))
+            (title-func (plist-get pattern :title-function))
+            (matched-value (plist-get grep-result :matched-value))
+            (src-id-func (plist-get pattern :matched-value)))
+       (when title-func
+         (plist-put grep-result
+                    :title
+                    (funcall title-func matched-value)))
+       (when src-id-func
+         (plist-put grep-result
+                    :id
+                    (funcall src-id-func matched-value))))
+     grep-result)
+   (blk-grep blk-grepper
+             blk-patterns
+             (blk-list-files))))
+
+;;;###autoload
+(defun blk-all-to-json (filepath)
+  "Export the data recognizable by blk into a json file"
+  (interactive (list (read-file-name "output file: ")))
+  (if (json-available-p)
+      (let* ((data (blk-collect-all)))
+        (with-temp-file
+            filepath
+          (insert (json-encode data)))
+        (message "Wrote json to %s" filepath))
+    (message "Json isnt available")))
+
 (provide 'blk)
 ;; blk.el ends here
