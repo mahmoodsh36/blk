@@ -82,6 +82,50 @@ Return nil if not found."
                             (point) (org-current-line)))
            nil)))))
 
+(defun blk-org-id-at-point (grep-data)
+  "Get the id to the org element at point.
+If no id can be found, interactively select one from the results of
+calling grep using GREP-DATA."
+  (let ((elm (org-element-at-point)))
+    (when elm
+      (let* ((elm-type (org-element-type elm))
+             (id (cond
+                  ;; if we are at a block and it has a name, return that, otherwise return the link to the file
+                  ((and (eq elm-type 'special-block)
+                        (org-element-property :name elm))
+                   (org-element-property :name elm))
+                  ;; for links to files, through org-id or denote #+identifier
+                  ((or (eq elm-type 'keyword)
+                       (and (eq elm-type 'special-block)
+                            (not (org-element-property :name elm))))
+                   (or
+                    ;; for denote
+                    (car (alist-get
+                          "IDENTIFIER"
+                          (org-collect-keywords '("identifier"))
+                          nil nil 'string=))
+                    ;; for an org id (with or without org-roam)
+                    (org-id-get)))
+                  ;; if we are at a header, return its id (might return nil or id of file if header doesnt have id)
+                  ((eq elm-type 'headline) (org-id-get)))))
+        (or id (plist-get grep-data :matched-value))))))
+
+(defun blk-org-transclusion-at-point (grep-data)
+  "Function that return a DWIM org-transclusion plist.
+the plist returned represents an org-transclusion object which is then passed to
+org-transclusion to be handled for transclusion in an org buffer."
+  (let ((elm (org-element-at-point)))
+    (when elm
+      (let* ((elm-type (org-element-type elm)))
+        (cond
+          ;; handler for custom/src org-blocks
+          ((or (eq elm-type 'special-block) (eq elm-type 'src-block))
+           (list :src-content (buffer-substring (org-element-property :begin elm)
+                                                (org-element-property :end elm))
+                 :src-buf (current-buffer)
+                 :src-beg (org-element-property :begin elm)
+                 :src-end (org-element-property :end elm))))))))
+
 (defalias
   'blk-open-at-point
   'org-open-at-point-global

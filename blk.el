@@ -28,6 +28,8 @@
 (require 'subr-x)
 (require 'cl-lib)
 
+(require 'blk-org)
+
 (defcustom blk-directories (list (expand-file-name "~/notes/")
 				 (file-name-parent-directory (expand-file-name user-init-file)))
   "Blk directories within which to find files to insert and search for links.")
@@ -130,54 +132,6 @@ id-format is for inserting the link into a buffer.
 %i will be replaced by the target id.
 %o will be use Org link format to include both the id and title, when given.
 %t will be replaced by the target title, when given.")
-
-(defun blk-org-id-at-point (grep-data)
-  "Get the id to the org element at point.
-If no id can be found, interactively select one from the results of
-calling grep using GREP-DATA."
-  (let ((elm (org-element-at-point)))
-    (when elm
-      (let* ((elm-type (org-element-type elm))
-             (id (cond
-                  ;; if we are at a block and it has a name, return that, otherwise return the link to the file
-                  ((and (eq elm-type 'special-block)
-                        (org-element-property :name elm))
-                   (org-element-property :name elm))
-                  ;; for links to files, through org-id or denote #+identifier
-                  ((or (eq elm-type 'keyword)
-                       (and (eq elm-type 'special-block)
-                            (not (org-element-property :name elm))))
-                   (or
-                    ;; for denote
-                    (car (alist-get
-                          "IDENTIFIER"
-                          (org-collect-keywords '("identifier"))
-                          nil nil 'string=))
-                    ;; for an org id (with or without org-roam)
-                    (org-id-get)))
-                  ;; if we are at a header, return its id (might return nil or id of file if header doesnt have id)
-                  ((eq elm-type 'headline) (org-id-get)))))
-        (or id (plist-get grep-data :matched-value))))))
-
-(defun blk-org-transclusion-at-point (grep-data)
-  "Function that return a DWIM org-transclusion plist.
-the plist returned represents an org-transclusion object which is then passed to
-org-transclusion to be handled for transclusion in an org buffer."
-  (let ((elm (org-element-at-point)))
-    (when elm
-      (let* ((elm-type (org-element-type elm)))
-        (cond
-          ;; handler for custom/src org-blocks
-          ((or (eq elm-type 'special-block) (eq elm-type 'src-block))
-           (list :src-content (buffer-substring (org-element-property :begin elm)
-                                                (org-element-property :end elm))
-                 :src-buf (current-buffer)
-                 :src-beg (org-element-property :begin elm)
-                 :src-end (org-element-property :end elm))))))))
-
-(defun blk-org-src-id (grep-data)
-  "A function that returns the src id given by the :src-id-function of the match found in GREP-DATA, which is the result of the search"
-    (plist-get :))
 
 (defun blk-tex-transclusion-env-at-point (grep-data)
   "Function that returns the latex environment the cursor is in.
@@ -540,8 +494,6 @@ property list describing a shell command, see `blk-grepper-grep',"
                                   (plist-get grep-result :matched-value))))
             (blk-grep blk-grepper id-patterns (blk-list-files))))))
     grep-results))
-
-(require 'blk-org)
 
 (provide 'blk)
 ;; blk.el ends here
