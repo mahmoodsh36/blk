@@ -50,7 +50,7 @@
   "Return the LINK with DESC converted into html or markdown FORMAT.
 If LINK is not found, just return it as is."
   (if (blk-find-by-id link)
-      (let* ((linked-file (car (blk-find-by-id link)))
+      (let* ((linked-file (plist-get (car (blk-find-by-id link)) :filepath))
              (desc (or desc link))
              (linked-file-no-ext (file-name-sans-extension linked-file)))
         (cond
