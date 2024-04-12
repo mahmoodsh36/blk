@@ -421,6 +421,7 @@ sep is the property :delimiter of the plist CMD"
          match-text
          got-error
          globs
+         exit-code
          (glob-arg (plist-get cmd :glob-arg))
          (recursive-arg (plist-get cmd :recursive-arg))
          (bfr-name " blk-out") ;; we use this (internal) buffer to grab the results of call-process
