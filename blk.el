@@ -440,7 +440,7 @@ sep is the property :delimiter of the plist CMD"
                (mapcar
                 (lambda (dirpath)
                   (if glob-arg
-                      (format "%s/*" dirpath)
+                      (format "%s/*.*" dirpath)
                     (string-join ;; if glob-arg isnt provided, we expand the globs (i.e. wildcards) ourselves
                      (mapcar
                       (lambda (glob)
