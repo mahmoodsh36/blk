@@ -233,7 +233,7 @@ returns a plist that is then passed to org-transclusion"
 
 (defconst
   blk-grepper-grep
-  '(:command "grep -E -e \"%r\" %f --line-number --ignore-case --byte-offset --only-matching -d skip"
+  '(:command "grep -E -e \"%r\" $(eval echo $(printf ' %%s*.* ' %f)) --line-number --ignore-case --byte-offset --only-matching -d skip"
              :delimiter ":"
              :glob-arg "--include "
              :recursive-arg "-R"))
@@ -440,7 +440,7 @@ sep is the property :delimiter of the plist CMD"
                (mapcar
                 (lambda (dirpath)
                   (if glob-arg
-                      (format "%s/*.*" dirpath)
+                      (format "%s/" dirpath)
                     (string-join ;; if glob-arg isnt provided, we expand the globs (i.e. wildcards) ourselves
                      (mapcar
                       (lambda (glob)
@@ -453,10 +453,10 @@ sep is the property :delimiter of the plist CMD"
                 directories)
                " ")
               full-cmd (format
+                        "%s %s%s"
                         (format-spec (plist-get cmd :command)
                                     `((?f . ,files-str)
                                       (?r . ,(plist-get pattern :anchor-regex))))
-                        "%s %s%s"
                         globs-str
                         (if (and recursive-arg blk-search-recursively) recursive-arg ""))
               exit-code (call-process-shell-command full-cmd nil bfr-name)
