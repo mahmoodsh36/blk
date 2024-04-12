@@ -375,16 +375,22 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
 (defun blk-list-entries ()
   "List all the pattern matches found in the blk files."
   (let* ((grep-results
-          (mapcar
-           (lambda (grep-result)
-             (plist-put grep-result
-                        :title      ;; :title of match not to be confused with :title of the matched pattern
-                        (funcall (plist-get (plist-get grep-result :matched-pattern) :title-function)
-                                 (plist-get grep-result :matched-value))))
-           (blk-grep
-            blk-grepper
-            (cl-remove-if-not (lambda (pattern) (plist-get pattern :title-function)) blk-patterns)
-            blk-directories)))
+          (cl-remove-if-not
+           'identity
+           (mapcar
+            (lambda (grep-result)
+              (let* ((title-func (plist-get (plist-get grep-result :matched-pattern) :title-function))
+                     (matched-value (plist-get grep-result :matched-value))
+                     (title (funcall title-func matched-value)))
+                (if (not (string-empty-p (string-trim title)))
+                    (plist-put grep-result
+                               :title      ;; :title of match not to be confused with :title of the matched pattern
+                               title)
+                  nil)))
+            (blk-grep
+             blk-grepper
+             (cl-remove-if-not (lambda (pattern) (plist-get pattern :title-function)) blk-patterns)
+             blk-directories))))
          (entries (mapcar (lambda (grep-result)
                             (propertize (plist-get grep-result :title) 'grep-data grep-result))
                           grep-results)))
