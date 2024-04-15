@@ -25,10 +25,9 @@ basic installation with the basic features
     (setq blk-directories
           (list (expand-file-name "~/notes")
                 (file-name-parent-directory (expand-file-name user-init-file))))
-    (blk-configure-org-link) ;; required for blk-open-at-point to work
     (global-set-key (kbd "C-c o") #'blk-open-at-point)
     (global-set-key (kbd "C-c f") #'blk-find)
-    (global-set-key (kbd "C-c f") #'blk-insert))
+    (global-set-key (kbd "C-c i") #'blk-insert))
 #+end_src
 
 basic installation with ~org-transclusion~ "integration"
@@ -45,11 +44,10 @@ basic installation with ~org-transclusion~ "integration"
     (setq blk-directories
           (list (expand-file-name "~/notes")
                 (file-name-parent-directory (expand-file-name user-init-file))))
-    (blk-configure-org-link)
     (blk-configure-org-transclusion)
     (global-set-key (kbd "C-c o") #'blk-open-at-point)
     (global-set-key (kbd "C-c f") #'blk-find)
-    (global-set-key (kbd "C-c f") #'blk-insert))
+    (global-set-key (kbd "C-c i") #'blk-insert))
 #+end_src
 
 * basic functionality
