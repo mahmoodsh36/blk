@@ -86,18 +86,24 @@ Return nil if not found."
   "Get the id to the org element at point.
 If no id can be found, interactively select one from the results of
 calling grep using GREP-DATA."
-  (let ((elm (org-element-at-point)))
+  (let* ((elm (org-element-at-point))
+         ;; block-name isnt necessarily gonna be defined, may be nil when its not
+         ;; a block we're at, or if the block we're at doesnt define a :name
+         (block-name
+          (alist-get
+           :name
+           (org-babel-parse-header-arguments
+            (org-element-property :parameters elm)))))
     (when elm
       (let* ((elm-type (org-element-type elm))
              (id (cond
                   ;; if we are at a block and it has a name, return that, otherwise return the link to the file
-                  ((and (eq elm-type 'special-block)
-                        (org-element-property :name elm))
-                   (org-element-property :name elm))
+                  ((and (eq elm-type 'special-block) block-name)
+                   block-name)
                   ;; for links to files, through org-id or denote #+identifier
                   ((or (eq elm-type 'keyword)
                        (and (eq elm-type 'special-block)
-                            (not (org-element-property :name elm))))
+                            (not block-name)))
                    (or
                     ;; for denote
                     (car (alist-get
