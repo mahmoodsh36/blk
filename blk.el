@@ -233,6 +233,9 @@ returns a plist that is then passed to org-transclusion"
 
 (defconst
   blk-grepper-grep
+  ;; the 'eval' trickery is there because grep doesnt accept directories to search in,
+  ;; it only accepts files, so here we're expanding the glob in the shell itself
+  ;; before passing the paths to grep
   '(:command "grep -E -e \"%r\" $(eval echo $(printf ' %%s*.* ' %f)) --line-number --ignore-case --byte-offset --only-matching -d skip"
              :delimiter ":"
              :glob-arg "--include "
