@@ -23,7 +23,7 @@ basic installation with the basic features
 
 #+begin_src emacs-lisp :eval no
   (use-package blk
-    :ensure ( :host github :repo "mahmoodsheikh36/blk") ;; replace with :straight or :quelpa, etc
+    :straight (blk :host github :repo "mahmoodsheikh36/blk") ;; replace with :quelpa if needed
     :after (org)
     :config
     (setq blk-directories
@@ -42,7 +42,7 @@ basic installation with ~org-transclusion~ "integration"
     (add-hook 'org-mode-hook #'org-transclusion-mode))
 
   (use-package blk
-    :ensure ( :host github :repo "mahmoodsheikh36/blk") ;; replace with :straight or :quelpa, etc
+    :straight (blk :host github :repo "mahmoodsheikh36/blk") ;; replace with :quelpa if needed
     :after (org org-transclusion)
     :config
     (setq blk-directories
