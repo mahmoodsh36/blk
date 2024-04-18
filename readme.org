@@ -2,11 +2,15 @@
 #+description: a package for interlinking arbitrary blocks of text, with an emphasis on org mode
 notice: im currently still writing the readme so it is incomplete.
 * usage demo
-the "mandatory gif" demo:
 
 https://github.com/mahmoodsheikh36/blk/assets/33814416/3676c7b1-6e72-4ae1-a4cc-9b8709a21e65
 
-this is the simplest possible usage, alot more is possible as custom patterns can be defined for any filetype and ~blk~ would take care of the abstract task of linking and navigating the different patterns with the defined ids/titles.
+in the video above, a headline and an org block are created and then navigated to.
+
+another example of linking and/or transcluding latex environments:
+
+https://github.com/mahmoodsheikh36/blk/assets/33814416/4f291b4f-b788-43f7-949f-c20a1e8073a5
+
 * introduction
 blk is a very customizable, small package for interlinking arbitrary blocks of text, focused on org mode. as unoriginal and redundant as that may sound, this package doesnt do anything fancy and doesnt try to be anything but a glorified grepper. read on and you shall see how simple yet powerful the philosophy behind this package can be.
 * why
@@ -101,14 +105,39 @@ for each grepper a different table of patterns is defined, the grepper is chosen
 ~denote~ can be easily used with ~blk~ as their features dont overlap, personally, i use denote as a tool to keep my org files names in sync with the in-buffer org settings and ~blk~ to insert/open/navigate links and blocks of text.
 ** org-roam
 * extending blk
-** creating custom patterns
+** creating custom rules
+~blk~ finds candidates using the rules defined in the list ~blk-patterns~, to add your own rule you can add it to the list, or even better, add it to the list of rules that is defined for the specific grepper that you decided to use, see the *different greppers* section.
+
+for example, what i personally like to do when writing math is write blocks like the following:
+
+#+begin_src org
+  ,#+begin_definition :defines topological space :name def-top-spc
+  a set \(X\) for which a topology \(\mathcal{T}\) has been specified is called a /topological space/.
+  ,#+end_definition
+#+end_src
+
+what i want to be able to do is navigate to this "definition" using the value after ~:defines~, and link to this definition using the link ~[[blk:def-top-spc]]~ (which by the way can be inserted anywhere and opened using ~blk-open-at-point~, not just org files).
+
+to make this possible i write:
+
+#+begin_src emacs-lisp
+  (add-to-list blk-rg-patterns (list :title "definition"
+                                     :glob "*.org"
+                                     :anchor-regex "(:defines)\\s+[^:]+"
+                                     :title-function 'blk-value-after-space-before-colon
+                                     :extract-id-function 'blk-org-id-at-point))
+  (setq blk-patterns blk-rg-patterns) ;; you might have to run this unless you modify the variable blk-patterns directly
+#+end_src
+
+see the documentation of ~blk-patterns~ for what each property is for.
 * blk vs interactive grepping
+if something like ~consult-grep~ is enough for you, and you dont need to make links to specific locations in your files or notes, then this package isnt for you, what it does is that it takes the idea of writing links to other files and extends it to more than just files, it allows for making links to arbitrary blocks of text and transcluding them from one file into another, the transclusion part is to avoid copying for example one equation from an org file into another, you can simply transclude it by its id, this reduces work and keeps the equation in the different files in sync (when the source is edited).
 * todo
 ** completion-at-point
 ** org-roam backlink buffer integration
 ** denote backlink buffer integration
-** patterns for markdown files
-** patterns for file names without needing to grep them (similar to what denote does)
+** rules for markdown files
+** rules for file names without needing to grep them (similar to what denote does)
 ** efficiency concerns
 ** capture templates
 ** add support for ~customize~ (customization via the default interface, i.e. without code)
