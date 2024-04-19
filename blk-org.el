@@ -90,10 +90,11 @@ calling grep using GREP-DATA."
          ;; block-name isnt necessarily gonna be defined, may be nil when its not
          ;; a block we're at, or if the block we're at doesnt define a :name
          (block-name
-          (alist-get
-           :name
-           (org-babel-parse-header-arguments
-            (org-element-property :parameters elm)))))
+          (or (org-element-property :name (org-element-at-point)) ;; for #+name: keyword before block
+              (alist-get ;; for :name in #+begin_something :name...
+               :name
+               (org-babel-parse-header-arguments
+                (org-element-property :parameters elm))))))
     (when elm
       (let* ((elm-type (org-element-type elm))
              (id (cond
