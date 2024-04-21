@@ -146,22 +146,24 @@ used for transclusion of latex environments")
 auctex isnt installed and loaded. errors out if theres no latex environment at point.
 Returns a cons of the from (beginning . end) for the start/end position of the latex environment
 at point, respectively."
-  (LaTeX-find-matching-begin)
-  (let ((begin (point)))
-    (forward-char) ;; without this auctex cant find \end{} for some reason
-    (LaTeX-find-matching-end)
-    (cons begin (point))))
+  (save-excursion
+    (LaTeX-find-matching-begin)
+    (let ((begin (point)))
+      (forward-char) ;; without this auctex cant find \end{} for some reason
+      (LaTeX-find-matching-end)
+      (cons begin (point)))))
 
 (defun blk-naive-env-at-point-bounds ()
   "Get the boundaries of the latex environment at point using a simple regex search,
 Returns a cons of the from (beginning . end) for the start/end position of the latex environment
 at point, respectively. errors out if it fails to find a latex environment."
-  (progn (search-backward "\\begin{")
-         (let ((begin (point)))
-           (re-search-forward "\\\\end{[^{}]+}")
-           (goto-char (match-end 0))
-           (let ((end (point)))
-             (cons begin end)))))
+  (save-excursion
+    (search-backward "\\begin{")
+    (let ((begin (point)))
+      (re-search-forward "\\\\end{[^{}]+}")
+      (goto-char (match-end 0))
+      (let ((end (point)))
+        (cons begin end)))))
 
 (defun blk-tex-transclusion-env-at-point (grep-data)
   "Function that returns the latex environment the cursor is in.
