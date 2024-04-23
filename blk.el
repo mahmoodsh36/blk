@@ -137,7 +137,7 @@ id-format is for inserting the link into a buffer.
   blk-tex-env-at-point-function
   #'blk-naive-env-at-point-bounds
   "Could be one of `blk-auctex-env-at-point-bounds', `blk-naive-env-at-point-bounds' (the former
-maybe be more \"sophisticated\"). has to be a function that returns a cons of the from
+may be more \"sophisticated\"). has to be a function that returns a cons of the from
 (beginning . end) for the start/end position of the latex environment at point, respectively.
 used for transclusion of latex environments")
 
@@ -647,7 +647,7 @@ property list describing a shell command, see `blk-grepper-grep',"
       (let* ((data (blk-collect-all)))
         (with-temp-file
             filepath
-          (insert (json-encode data)))
+          (insert (json-encode-array data)))
         (message "Wrote json to %s" filepath))
     (message "Json isnt available")))
 
