@@ -176,9 +176,6 @@ works as intended. syntax like \\[ \\] isnt yet handled.
 the argument GREP-DATA is the result returned from the search for ID
 it is unused and may be ignored, but since the function is called with it
 we have to keep it defined this way.
-the function makes use of `org-latex-regexps', but it doesnt necessarily
-depend on org-mode as it may work outside org-mode, since org-mode is builtin
-we can safely assume the variable is there.
 returns a plist that is then passed to org-transclusion"
   (let ((bounds (funcall blk-tex-env-at-point-function))
         (begin (car bounds))
