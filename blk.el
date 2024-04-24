@@ -268,7 +268,7 @@ command is to be used.")
   (pcase (blk-choose-grepper)
     (blk-grepper-rg blk-rg-patterns)
     (blk-grepper-grep blk-grep-patterns)
-    (blk-grepper-emacs blk-emacs-patterns))
+    ('blk-grepper-emacs blk-emacs-patterns))
   "The list of patterns to use with the blk grepper.
 Each entry should be a plist representing the data of a pattern:
   :title is the title/type of the pattern (used for completing-read)
