@@ -621,7 +621,7 @@ property list describing a shell command, see `blk-grepper-grep',"
      (let* ((pattern (plist-get grep-result :matched-pattern))
             (title-func (plist-get pattern :title-function))
             (matched-value (plist-get grep-result :matched-value))
-            (src-id-func (plist-get pattern :matched-value)))
+            (src-id-func (plist-get pattern :src-id-function)))
        (when title-func
          (plist-put grep-result
                     :title
@@ -638,7 +638,7 @@ property list describing a shell command, see `blk-grepper-grep',"
 
 ;;;###autoload
 (defun blk-all-to-json (filepath)
-  "Export the data recognizable by blk into a json file"
+  "Export the data recognizable by blk into a json file."
   (interactive (list (read-file-name "output file: ")))
   (if (json-available-p)
       (let* ((data (blk-collect-all)))
@@ -647,6 +647,27 @@ property list describing a shell command, see `blk-grepper-grep',"
           (insert (json-encode-array data)))
         (message "Wrote json to %s" filepath))
     (message "Json isnt available")))
+
+(defun blk-completion-at-point ()
+  "`completion-at-point' function for blk links, should be added to `completion-at-point-functions', may be slow depending on the amount of files you have."
+  (let* ((bounds (bounds-of-thing-at-point 'symbol))
+         (beg (car bounds))
+         (end (cdr bounds)))
+    (list beg end
+          (completion-table-dynamic
+           (lambda (_)
+             (cl-remove-if-not
+              #'identity
+              (mapcar (lambda (entry) (plist-get entry :id))
+                      (blk-collect-all))))))))
+
+(defun blk-enable-completion ()
+  "enable completion for ids/titles recognized by blk, by adding the `blk-completion-at-point' function
+to `completion-at-point-functions', currently only single-word id completion is implemented.
+example usage:
+(add-hook 'org-mode-hook #'blk-enable-completion)"
+  (add-to-list 'completion-at-point-functions
+               #'blk-completion-at-point))
 
 (provide 'blk)
 ;; blk.el ends here
