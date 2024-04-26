@@ -52,7 +52,7 @@ If LINK is not found, just return it as is."
   (if (blk-find-by-id link)
       (let* ((linked-file (plist-get (car (blk-find-by-id link)) :filepath))
              (desc (or desc link))
-             (linked-file-no-ext (file-name-sans-extension linked-file)))
+             (linked-file-no-ext (file-name-sans-extension (org-export-file-uri linked-file))))
         (cond
          ((eq format 'html) (format "<a href=\"%s.html\">%s</a>" linked-file-no-ext desc))
          ((eq format 'md) (format "[%s](%s.md)" desc linked-file-no-ext))
