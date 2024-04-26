@@ -461,7 +461,7 @@ sep is the property :delimiter of the plist CMD"
                 directories)
                " ")
               full-cmd (format
-                        "%s %s%s"
+                        "%s %s %s"
                         (format-spec (plist-get cmd :command)
                                     `((?f . ,files-str)
                                       (?r . ,(plist-get pattern :anchor-regex))))
