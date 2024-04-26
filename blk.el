@@ -31,7 +31,7 @@
 (require 'blk-org)
 
 (defcustom blk-directories (list (expand-file-name "~/notes/")
-				 (file-name-parent-directory (expand-file-name user-init-file)))
+				 user-emacs-directory)
   "Blk directories within which to find files to insert and search for links.")
 
 (defcustom blk-search-recursively nil
@@ -41,7 +41,7 @@ Default is nil; changing it may have severe consequences on speed.")
 (defcustom blk-emacs-patterns
   (list
    (list :title "titled org file or block"
-         :anchor-regex "\\(:title\\|:alias\\|#\\+title:\\|#\\+alias:\\|#\\+name:\\)\s+[^:]+"
+         :anchor-regex "\\(:title\\|:alias\\|:name\\|#\\+title:\\|#\\+alias:\\|#\\+name:\\)\s+[^:]+"
          :title-function 'blk-value-after-space
          :extract-id-function 'blk-org-id-at-point
          :glob "*.org")
@@ -80,7 +80,7 @@ Default is nil; changing it may have severe consequences on speed.")
   (list
    (list :title "titled org file or block"
          :glob "*.org"
-         :anchor-regex "(:title|:alias|#\\+title:|#\\+alias:|#\\+name:)\\s+[^:]+"
+         :anchor-regex "(:title|:alias|:name|#\\+title:|#\\+alias:|#\\+name:)\\s+[^:]+"
          :title-function 'blk-value-after-space
          :extract-id-function #'blk-org-id-at-point)
    (list :title "elisp function"
