@@ -125,7 +125,7 @@ to make this possible i write:
   (add-to-list blk-rg-patterns (list :title "definition"
                                      :glob "*.org"
                                      :anchor-regex "(:defines)\\s+[^:]+"
-                                     :title-function 'blk-value-after-space-before-colon
+                                     :title-function 'blk-value-after-space-upto-colon
                                      :extract-id-function 'blk-org-id-at-point))
   (setq blk-patterns blk-rg-patterns) ;; you might have to run this unless you modify the variable blk-patterns directly
 #+end_src

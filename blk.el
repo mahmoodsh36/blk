@@ -38,10 +38,20 @@
   "Non-nil means to invoke greppers recursively in `blk-directories'.
 Default is nil; changing it may have severe consequences on speed.")
 
+(defcustom blk-enable-groups nil
+  "Non-nil means to construct groups (or outlines) in `blk-find', according to the rules
+defined in `blk-groups'. Default is nil; changing it may have severe consequences on speed
+as the current method runs in O(n^2) time.")
+
 (defcustom blk-emacs-patterns
   (list
-   (list :title "titled org file or block"
-         :anchor-regex "\\(:title\\|:alias\\|:name\\|#\\+title:\\|#\\+alias:\\|#\\+name:\\)\s+[^:]+"
+   (list :title "titled org block"
+         :anchor-regex "\\(:title\\|:alias\\|:name\\|#\\+name:\\)\s+[^:]+"
+         :title-function 'blk-value-after-space
+         :extract-id-function 'blk-org-id-at-point
+         :glob "*.org")
+   (list :title "titled org file"
+         :anchor-regex "\\(#\\+title:\\|#\\+alias:\\)\s+[^:]+"
          :title-function 'blk-value-after-space
          :extract-id-function 'blk-org-id-at-point
          :glob "*.org")
@@ -72,52 +82,117 @@ Default is nil; changing it may have severe consequences on speed.")
    (list :title "id anchor for org named block"
          :glob "*.org"
          :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
-         :src-id-function 'blk-value-after-space-before-colon
+         :src-id-function 'blk-value-after-space-upto-colon
          :transclusion-function 'blk-org-transclusion-at-point))
   "The pattern table for the elisp grepper; see documentation for `blk-patterns'.")
 
+(defvar blk-rg-org-file-rule
+  (list :shared-name 'blk-org-file-rule
+        :title "titled org file or block"
+        :glob "*.org"
+        :anchor-regex "(#\\+title:|#\\+alias:)\\s+[^:]+"
+        :title-function 'blk-value-after-space
+        :extract-id-function #'blk-org-id-at-point)
+  "Used in `blk-rg-patterns' to match titles of org files.
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-org-block-rule
+  (list :shared-name 'blk-org-block-rule
+        :title "titled org block"
+        :glob "*.org"
+        :anchor-regex "(:title|:alias|:name|#\\+name:)\\s+[^:]+"
+        :title-function 'blk-value-after-space
+        :extract-id-function #'blk-org-id-at-point)
+  "Used in `blk-rg-patterns' to match titles of org blocks.
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-elisp-function-rule
+  (list :title "elisp function"
+        :glob "*.el"
+        :anchor-regex "^\\(defun\\s+\\S+"
+        :title-function 'blk-value-after-space)
+  "Used in `blk-rg-patterns' to match names of elisp functions.
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-org-header-rule
+  (list :shared-name 'blk-org-header-rule
+        :title "org header"
+        :glob "*.org"
+        :anchor-regex "^\\*+\\s.*"
+        :title-function 'blk-value-after-space
+        :extract-id-function 'blk-org-id-at-point)
+  "Used in `blk-rg-patterns' to match org headings.
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-org-id-rule
+  (list :glob "*.org"
+        :anchor-regex "^:ID:\\s*.*"
+        :src-id-function 'blk-org-id-value)
+  "Used in `blk-rg-patterns' to match ids of org headings or files.
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-org-link-rule
+  (list :glob "*.org"
+        :anchor-regex "\\[\\[[a-z]+:[^\\[\\]]+\\]\\]|\\[\\[[a-z]+:[^\\[\\]]+\\]\\[[^\\[\\]]+\\]\\]"
+        :dest-id-function 'blk-org-link-path)
+  "Used in `blk-rg-patterns' to match links in org-mode files.
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-denote-identifier-rule
+  (list :glob "*.org"
+        :anchor-regex "#\\+identifier:\\s+.*"
+        :src-id-function 'blk-value-after-colon)
+  "Used in `blk-rg-patterns' to match ids inserted by denote into org-mode files.
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-latex-label-rule
+  (list :title "latex label"
+        :glob (list "*.org" "*.tex")
+        :anchor-regex "\\\\\\\\label\\\\{[^\\\\{\\\\}]*\\\\}"
+        :src-id-function 'blk-latex-label-id
+        :title-function 'blk-latex-label-id
+        :transclusion-function 'blk-tex-transclusion-env-at-point)
+  "Used in `blk-rg-patterns' to match latex labels
+consult the documentation of `blk-patterns' for the keywords below.")
+(defvar blk-rg-org-block-name-rule
+  (list :shared-name 'blk-org-block-rule
+        :title "id anchor for org named block"
+        :glob "*.org"
+        :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
+        :src-id-function 'blk-value-after-space-upto-colon
+        :transclusion-function 'blk-org-transclusion-at-point)
+  "Used in `blk-rg-patterns' to match names of org-mode blocks
+consult the documentation of `blk-patterns' for the keywords below.")
+
 (defcustom blk-rg-patterns
-  (list
-   (list :title "titled org file or block"
-         :glob "*.org"
-         :anchor-regex "(:title|:alias|:name|#\\+title:|#\\+alias:|#\\+name:)\\s+[^:]+"
-         :title-function 'blk-value-after-space
-         :extract-id-function #'blk-org-id-at-point)
-   (list :title "elisp function"
-         :glob "*.el"
-         :anchor-regex "^\\(defun\\s+\\S+"
-         :title-function 'blk-value-after-space)
-   (list :title "org header"
-         :glob "*.org"
-         :anchor-regex "^\\*+\\s.*"
-         :title-function 'blk-value-after-space
-         :extract-id-function 'blk-org-id-at-point)
-   (list :glob "*.org"
-         :anchor-regex "^:ID:\\s*.*"
-         :src-id-function 'blk-org-id-value)
-   (list :glob "*.org"
-         :anchor-regex "\\[\\[[a-z]+:[^\\[\\]]+\\]\\]|\\[\\[[a-z]+:[^\\[\\]]+\\]\\[[^\\[\\]]+\\]\\]"
-         :dest-id-function 'blk-org-link-path)
-   (list :glob "*.org"
-         :anchor-regex "#\\+identifier:\\s+.*"
-         :src-id-function 'blk-value-after-colon)
-   (list :title "latex label"
-         :glob (list "*.org" "*.tex")
-         :anchor-regex "\\\\\\\\label\\\\{[^\\\\{\\\\}]*\\\\}"
-         :src-id-function 'blk-latex-label-id
-         :title-function 'blk-latex-label-id
-         :transclusion-function 'blk-tex-transclusion-env-at-point)
-   (list :title "id anchor for org named block"
-         :glob "*.org"
-         :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
-         :src-id-function 'blk-value-after-space-before-colon
-         :transclusion-function 'blk-org-transclusion-at-point))
+  (list blk-rg-org-file-rule
+        blk-rg-org-block-rule
+        blk-rg-elisp-function-rule
+        blk-rg-org-header-rule
+        blk-rg-org-id-rule
+        blk-rg-org-link-rule
+        blk-rg-denote-identifier-rule
+        blk-rg-latex-label-rule
+        blk-rg-org-block-name-rule)
   "The pattern table for ripgrep; see documentation for `blk-patterns'.")
+
+(defcustom blk-groups
+  (list (list :title "org mode file/header outline"
+              :title-group-function 'join-with-slash
+              :rules '(blk-org-file-rule
+                       blk-org-header-rule))
+        (list :title "org mode file/header/block outline"
+              :title-group-function 'join-with-slash
+              :rules '(blk-org-file-rule
+                       blk-org-header-rule
+                       blk-org-block-rule))
+        (list :title "org mode file/block outline"
+              :title-group-function 'join-with-slash
+              :rules '(blk-org-file-rule
+                       blk-org-block-rule)))
+  "group titles together for full outlines when navigating them")
+
+(defun join-with-slash (strings)
+  "Join STRINGS with forward slash."
+  (string-join strings "/"))
 
 ;; grep -E plays well with rg regex's so as far as i can tell no extra work is needed
 (defcustom blk-grep-patterns
   blk-rg-patterns
-  "the pattern table for grep")
+  "The pattern table for blk-grepper-grep .")
 
 ;; Support insertion into editable non-file buffers too.
 (defcustom blk-insert-patterns
@@ -227,8 +302,8 @@ returns a plist that is then passed to org-transclusion"
 (defun blk-latex-label-id (text)
   (string-trim (car (split-string (cadr (split-string text "{")) "}"))))
 
-(defun blk-value-after-space-before-colon (str)
-  (string-trim (car (split-string (blk-value-after-space str) ":"))))
+(defun blk-value-after-space-upto-colon (str)
+  (string-trim (car (split-string (blk-value-after-space str) " :"))))
 
 (defconst
   blk-grepper-grep
@@ -238,14 +313,16 @@ returns a plist that is then passed to org-transclusion"
   '(:command "grep -E -e \"%r\" $(eval echo $(printf ' %%s*.* ' %f)) --line-number --ignore-case --byte-offset --only-matching -d skip"
              :delimiter ":"
              :glob-arg "--include "
-             :recursive-arg "-R"))
+             :recursive-arg "-R")
+  "The \"grepper\" definition for gnu grep (from coreutils), with the -E flag.")
 
 (defconst
   blk-grepper-rg
   (list :command "rg --max-depth 1 --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
         :delimiter "\t"
         :glob-arg "--glob "
-        :recursive-arg "--max-depth 10000")) ;; rg can handle a dupe arg, the latter overrides the former.
+        :recursive-arg "--max-depth 10000") ;; rg can handle a dupe arg, the latter overrides the former.
+  "The \"grepper\" definition for ripgrep.")
 
 (defun blk-choose-grepper ()
   "Choose a blk grepper based on a search of `exec-path'.
@@ -374,8 +451,8 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
        (string-match-p (wildcard-to-regexp glob) (buffer-file-name buf))))
    (buffer-list)))
 
-(defun blk-list-entries ()
-  "List all the pattern matches found in the blk files."
+(defun blk-list-entries-with-titles ()
+  "List all the matches blk can find, apply the :title-function to grab the title of each entry."
   (let* ((grep-results
           (cl-remove-if-not
            'identity
@@ -386,17 +463,88 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
                      (title (funcall title-func matched-value)))
                 (if (not (string-empty-p (string-trim title)))
                     (plist-put grep-result
-                               :title      ;; :title of match not to be confused with :title of the matched pattern
+                               :title ;; :title of match not to be confused with :title of the matched pattern
                                title)
                   nil)))
             (blk-grep
              blk-grepper
              (cl-remove-if-not (lambda (pattern) (plist-get pattern :title-function)) blk-patterns)
-             blk-directories))))
+             blk-directories)))))
+    grep-results))
+
+(defun blk-list-entries ()
+  "List all the pattern matches found in the blk files."
+  (let* ((grep-results (blk-list-entries-with-titles))
+         (groups (if blk-enable-groups (blk-group-entries grep-results) nil))
          (entries (mapcar (lambda (grep-result)
                             (propertize (plist-get grep-result :title) 'grep-data grep-result))
-                          grep-results)))
+                          (append grep-results groups))))
     entries))
+
+(defun blk-group-entries (grep-results)
+  (let* ((files-entries) ;; maps each file to its entries
+         (final-groups))
+    (dolist (result grep-results)
+      (let* ((result-file (plist-get result :filepath))
+             (file-entry (assoc result-file files-entries #'string=)))
+        (if file-entry
+            (push result (cdr file-entry))
+          (push (cons result-file (list result)) files-entries))))
+    ;; sort the grep entries of each file by their positions
+    (dolist (file-entries files-entries)
+      (setcdr file-entries (cl-sort (cdr file-entries) '< :key (lambda (entry) (plist-get entry :position)))))
+    ;; gather the groups
+    (dolist (group blk-groups)
+      (dolist (file-entries files-entries)
+        (let ((new-groups (blk-group-entries-helper file-entries (plist-get group :rules))))
+          (when (not (equal 'discard new-groups))
+            (dolist (new-group new-groups)
+              (let ((group-with-properties (copy-tree group)))
+                (plist-put group-with-properties :grep-entries new-group)
+                (push group-with-properties final-groups)))))))
+    ;; make the final groups of grep-result entries resemble grep-result entries of thsemselves, so that they can be handled as such by blk-find or other functions that accept grep-result entries, perhaps not the best way to go about it in terms of code readability.
+    (dolist (final-group final-groups)
+      (let* ((final-group-grep-entries (plist-get final-group :grep-entries))
+             (titles (mapcar (lambda (grep-result)
+                               (plist-get grep-result :title))
+                             final-group-grep-entries))
+             (titles-func (plist-get final-group :title-group-function))
+             (last-grep-entry-in-group (elt final-group-grep-entries
+                                            (1- (length final-group-grep-entries)))))
+        (plist-put final-group :title (funcall titles-func titles))
+        (plist-put final-group :position (plist-get last-grep-entry-in-group :position))
+        (plist-put final-group :filepath (plist-get last-grep-entry-in-group :filepath))))
+    final-groups))
+
+(defun blk-group-entries-helper (grep-results rule-names)
+  (if rule-names
+      (if grep-results
+          (let ((groups)
+                (grep-results-iterator grep-results))
+            (while grep-results-iterator
+              (let ((current-grep-result (car grep-results-iterator))
+                    (current-rule-name (car rule-names)))
+                ;; find all possible candidates for the current rule
+                (when (equal current-rule-name (plist-get (plist-get current-grep-result :matched-pattern)
+                                                          :shared-name))
+                  ;; cross product of the possible candidates of this rule by the possible candidates of
+                  ;; the next rule by the possible candidates of the next-to-next rule, and so on.. rescursively.
+                  ;; note that these "cross products" have to maintain their order and the next rules are
+                  ;; reserved for entries whose positions are later than the positions of the corresponding
+                  ;; previous entries (current entries).
+                  (let ((result (blk-group-entries-helper (cdr grep-results-iterator)
+                                                          (cdr rule-names))))
+                    (when (not (equal result 'discard))
+                      (dolist (subgroup result)
+                        (let ((new-group (append (list current-grep-result) subgroup)))
+                          (push new-group groups)))))))
+              (setq grep-results-iterator (cdr grep-results-iterator)))
+            groups)
+        ;; if we get here it means we have rules left but no candidates, we return `discard'
+        ;; which should be interpreted as a "discard" signal in parent recursion calls
+        'discard)
+    ;; if we get here it means we've exhausted all the groups, and we may return gracefully
+    (list nil)))
 
 (defun blk-str-list-matches (regex str-list)
   "Return a list of the strings matching REGEX in STR-LIST."
@@ -500,9 +648,11 @@ Select one and visit it."
                 (completion-extra-properties
                  '(:annotation-function
                    (lambda (key)
-                     (format "\t%s" (plist-get (plist-get (get-text-property 0 'grep-data key)
-                                                          :matched-pattern)
-                                               :title))))))
+                     (let ((grep-result (get-text-property 0 'grep-data key)))
+                       (when (plist-get grep-result :matched-pattern)
+                         (format "\t%s"
+                                 (plist-get (plist-get grep-result :matched-pattern)
+                                            :title))))))))
            (when entries (completing-read "entry " entries)))))
   (when text
     (if (get-text-property 0 'grep-data text)
