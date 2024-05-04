@@ -39,9 +39,16 @@
 Default is nil; changing it may have severe consequences on speed.")
 
 (defcustom blk-enable-groups nil
-  "Non-nil means to construct groups (or outlines) in `blk-find', according to the rules
-defined in `blk-groups'. Default is nil; changing it may have severe consequences on speed
-as the current method runs in O(n^2) time.")
+  "Non-nil means to construct groups (or outlines) in `blk-find' during search according to
+the rules defined in `blk-groups'. Default is nil; changing it may have severe
+consequences on speed as the current method runs in O(n^2) time.
+
+a quick benchmark on my machine speaks volumes:
+with `blk-enable-groups` set to `t`
+  (benchmark-run (blk-list-entries)) ; => (0.577957745 2 0.31831121999999823)
+with `blk-enable-groups` set to `nil`
+  (benchmark-run (blk-list-entries)) ; => (0.295143048 1 0.15662816200000407)
+")
 
 (defcustom blk-emacs-patterns
   (list
