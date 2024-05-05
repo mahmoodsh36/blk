@@ -47,8 +47,7 @@ a quick benchmark on my machine speaks volumes:
 with `blk-enable-groups` set to `t`
   (benchmark-run (blk-list-entries)) ; => (0.577957745 2 0.31831121999999823)
 with `blk-enable-groups` set to `nil`
-  (benchmark-run (blk-list-entries)) ; => (0.295143048 1 0.15662816200000407)
-")
+  (benchmark-run (blk-list-entries)) ; => (0.295143048 1 0.15662816200000407)")
 
 (defcustom blk-emacs-patterns
   (list
