@@ -51,12 +51,12 @@ with `blk-enable-groups` set to `nil`
 
 (defcustom blk-emacs-patterns
   (list
-   (list :title "titled org block"
+   (list :title "org block"
          :anchor-regex "\\(:title\\|:alias\\|:name\\|#\\+name:\\)\s+[^:]+"
          :title-function 'blk-value-after-space
          :extract-id-function 'blk-org-id-at-point
          :glob "*.org")
-   (list :title "titled org file"
+   (list :title "org file"
          :anchor-regex "\\(#\\+title:\\|#\\+alias:\\)\s+[^:]+"
          :title-function 'blk-value-after-space
          :extract-id-function 'blk-org-id-at-point
@@ -94,7 +94,7 @@ with `blk-enable-groups` set to `nil`
 
 (defvar blk-rg-org-file-rule
   (list :shared-name 'blk-org-file-rule
-        :title "titled org file"
+        :title "org file"
         :glob "*.org"
         :anchor-regex "(#\\+title:|#\\+alias:)\\s+[^:]+"
         :title-function 'blk-value-after-space
@@ -103,7 +103,7 @@ with `blk-enable-groups` set to `nil`
 consult the documentation of `blk-patterns' for the keywords below.")
 (defvar blk-rg-org-block-rule
   (list :shared-name 'blk-org-block-rule
-        :title "titled org block"
+        :title "org block"
         :glob "*.org"
         :anchor-regex "(:title|:alias|:name|#\\+name:)\\s+[^:]+"
         :title-function 'blk-value-after-space
@@ -315,7 +315,9 @@ returns a plist that is then passed to org-transclusion"
   blk-grepper-grep
   ;; the 'eval' trickery is there because grep doesnt accept directories to search in,
   ;; it only accepts files, so here we're expanding the glob in the shell itself
-  ;; before passing the paths to grep
+  ;; before passing the paths to grep, we dont pass the raw list of files as arguments
+  ;; because it may cause an overflow in the buffer that holds the arguments
+  ;; to the command (i have experienced it before implementing this solution).
   '(:command "grep -E -e \"%r\" $(eval echo $(printf ' %%s*.* ' %f)) --line-number --ignore-case --byte-offset --only-matching -d skip"
              :delimiter ":"
              :glob-arg "--include "
