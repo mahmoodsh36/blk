@@ -94,7 +94,7 @@ with `blk-enable-groups` set to `nil`
 
 (defvar blk-rg-org-file-rule
   (list :shared-name 'blk-org-file-rule
-        :title "titled org file or block"
+        :title "titled org file"
         :glob "*.org"
         :anchor-regex "(#\\+title:|#\\+alias:)\\s+[^:]+"
         :title-function 'blk-value-after-space
