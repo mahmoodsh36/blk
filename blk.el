@@ -41,7 +41,7 @@ Default is nil; changing it may have severe consequences on speed.")
 (defcustom blk-enable-groups nil
   "Non-nil means to construct groups (or outlines) in `blk-find' during search according to
 the rules defined in `blk-groups'. Default is nil; changing it may have severe
-consequences on speed as the current method runs in O(n^2) time.
+consequences on speed as the current method runs slowly.
 
 a quick benchmark on my machine speaks volumes:
 with `blk-enable-groups` set to `t`
