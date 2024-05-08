@@ -285,7 +285,7 @@ returns a plist that is then passed to org-transclusion"
       (progn (search-backward "\\begin{")
              (let ((begin (point)))
                (re-search-forward "\\\\end{[^{}]+}")
-               (goto-char (match-end 0))
+               (goto-char (1+ (match-end 0)))
                (let ((end (point)))
                  (list :src-content (buffer-substring begin end)
                        :src-buf (current-buffer)
