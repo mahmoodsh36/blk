@@ -258,13 +258,13 @@ the argument GREP-DATA is the result returned from the search for ID
 it is unused and may be ignored, but since the function is called with it
 we have to keep it defined this way.
 returns a plist that is then passed to org-transclusion"
-  (let ((bounds (funcall blk-tex-env-at-point-function))
-        (begin (car bounds))
-        (end (cdr bounds))))
-  (list :src-content (buffer-substring begin end)
-        :src-buf (current-buffer)
-        :src-beg begin
-        :src-end end))
+  (let* ((bounds (funcall blk-tex-env-at-point-function))
+         (begin (car bounds))
+         (end (cdr bounds)))
+    (list :src-content (format "%s\n" (buffer-substring begin end)) ;; org-transclusion doesnt insert a newline
+          :src-buf (current-buffer)
+          :src-beg begin
+          :src-end end)))
 
 (defun blk-tex-transclusion-env-at-point (grep-data)
   "Function that returns the latex environment the cursor is in.
@@ -285,7 +285,7 @@ returns a plist that is then passed to org-transclusion"
       (progn (search-backward "\\begin{")
              (let ((begin (point)))
                (re-search-forward "\\\\end{[^{}]+}")
-               (goto-char (1+ (match-end 0)))
+               (goto-char (match-end 0))
                (let ((end (point)))
                  (list :src-content (buffer-substring begin end)
                        :src-buf (current-buffer)
