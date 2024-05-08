@@ -266,33 +266,6 @@ returns a plist that is then passed to org-transclusion"
           :src-beg begin
           :src-end end)))
 
-(defun blk-tex-transclusion-env-at-point (grep-data)
-  "Function that returns the latex environment the cursor is in.
-the plist returned represents an org-transclusion object which is then passed to
-org-transclusion to be handled for transclusion in an org buffer.
-this currently doesnt do anything being looking for the regex corresponding
-to a \\begin and \\end, which isnt the smartest way of doing it, but as long
-as the destination \\label{ID} is present in a latex environment the function
-works as intended. syntax like \\[ \\] isnt yet handled.
-the argument GREP-DATA is the result returned from the search for ID
-it is unused and may be ignored, but since the function is called with it
-we have to keep it defined this way.
-the function makes use of `org-latex-regexps', but it doesnt necessarily
-depend on org-mode as it may work outside org-mode, since org-mode is builtin
-we can safely assume the variable is there.
-returns a plist that is then passed to org-transclusion"
-  (condition-case err
-      (progn (search-backward "\\begin{")
-             (let ((begin (point)))
-               (re-search-forward "\\\\end{[^{}]+}")
-               (goto-char (match-end 0))
-               (let ((end (point)))
-                 (list :src-content (buffer-substring begin end)
-                       :src-buf (current-buffer)
-                       :src-beg begin
-                       :src-end end))))
-    (error nil)))
-
 (defun blk-value-after-space (str)
   (string-trim (string-join (cdr (split-string str " ")) " ")))
 
