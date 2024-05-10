@@ -56,7 +56,7 @@ If LINK is not found, just return it as is."
         (cond
          ((eq format 'html) (format "<a href=\"%s.html\">%s</a>" linked-file-no-ext desc))
          ((eq format 'md) (format "[%s](%s.md)" desc linked-file-no-ext))
-         ((eq format 'latex) (format "\\ref{%s}" link))
+         ((eq format 'latex) (format "\\hyperref[%s]{%s}" link (or desc link)))
          (t link)))
     link))
 
