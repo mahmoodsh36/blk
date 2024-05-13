@@ -89,7 +89,11 @@ with `blk-enable-groups` set to `nil`
          :glob "*.org"
          :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
          :src-id-function 'blk-value-after-space-upto-colon
-         :transclusion-function 'blk-org-transclusion-at-point))
+         :transclusion-function 'blk-org-transclusion-at-point)
+   (list :title "markdown header"
+         :glob "*.md"
+         :anchor-regex "^#+ .*"
+         :title-function 'blk-value-after-space))
   "The pattern table for the elisp grepper; see documentation for `blk-patterns'.")
 
 (defvar blk-rg-org-file-rule
@@ -100,7 +104,7 @@ with `blk-enable-groups` set to `nil`
         :title-function 'blk-value-after-space
         :extract-id-function #'blk-org-id-at-point)
   "Used in `blk-rg-patterns' to match titles of org files.
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-org-block-rule
   (list :shared-name 'blk-org-block-rule
         :title "org block"
@@ -109,14 +113,14 @@ consult the documentation of `blk-patterns' for the keywords below.")
         :title-function 'blk-value-after-space
         :extract-id-function #'blk-org-id-at-point)
   "Used in `blk-rg-patterns' to match titles of org blocks.
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-elisp-function-rule
   (list :title "elisp function"
         :glob "*.el"
         :anchor-regex "^\\(defun\\s+\\S+"
         :title-function 'blk-value-after-space)
   "Used in `blk-rg-patterns' to match names of elisp functions.
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-org-header-rule
   (list :shared-name 'blk-org-header-rule
         :title "org header"
@@ -125,25 +129,25 @@ consult the documentation of `blk-patterns' for the keywords below.")
         :title-function 'blk-value-after-space
         :extract-id-function 'blk-org-id-at-point)
   "Used in `blk-rg-patterns' to match org headings.
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-org-id-rule
   (list :glob "*.org"
         :anchor-regex "^:ID:\\s*.*"
         :src-id-function 'blk-org-id-value)
   "Used in `blk-rg-patterns' to match ids of org headings or files.
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-org-link-rule
   (list :glob "*.org"
         :anchor-regex "\\[\\[[a-z]+:[^\\[\\]]+\\]\\]|\\[\\[[a-z]+:[^\\[\\]]+\\]\\[[^\\[\\]]+\\]\\]"
         :dest-id-function 'blk-org-link-path)
   "Used in `blk-rg-patterns' to match links in org-mode files.
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-denote-identifier-rule
   (list :glob "*.org"
         :anchor-regex "#\\+identifier:\\s+.*"
         :src-id-function 'blk-value-after-colon)
   "Used in `blk-rg-patterns' to match ids inserted by denote into org-mode files.
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-latex-label-rule
   (list :title "latex label"
         :glob (list "*.org" "*.tex")
@@ -152,7 +156,7 @@ consult the documentation of `blk-patterns' for the keywords below.")
         :title-function 'blk-latex-label-id
         :transclusion-function 'blk-tex-transclusion-env-at-point)
   "Used in `blk-rg-patterns' to match latex labels
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-org-block-name-rule
   (list :shared-name 'blk-org-block-rule
         :title "id anchor for org named block"
@@ -161,7 +165,15 @@ consult the documentation of `blk-patterns' for the keywords below.")
         :src-id-function 'blk-value-after-space-upto-colon
         :transclusion-function 'blk-org-transclusion-at-point)
   "Used in `blk-rg-patterns' to match names of org-mode blocks
-consult the documentation of `blk-patterns' for the keywords below.")
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-rg-md-header-rule
+  (list :shared-name 'blk-md-header-rule
+        :title "markdown header"
+        :glob "*.md"
+        :anchor-regex "^#+\\s.*"
+        :title-function 'blk-value-after-space)
+  "Used in `blk-rg-patterns' to match markdown headings.
+consult the documentation of `blk-patterns' for the keywords.")
 
 (defcustom blk-rg-patterns
   (list blk-rg-org-file-rule
@@ -172,7 +184,8 @@ consult the documentation of `blk-patterns' for the keywords below.")
         blk-rg-org-link-rule
         blk-rg-denote-identifier-rule
         blk-rg-latex-label-rule
-        blk-rg-org-block-name-rule)
+        blk-rg-org-block-name-rule
+        blk-rg-md-header-rule)
   "The pattern table for ripgrep; see documentation for `blk-patterns'.")
 
 (defcustom blk-groups
@@ -599,6 +612,7 @@ sep is the property :delimiter of the plist CMD"
               exit-code (call-process-shell-command full-cmd nil bfr-name)
               out (with-current-buffer " blk-out" (substring-no-properties (buffer-string)))
               sep (plist-get cmd :delimiter))
+        (with-temp-file (file-truename "~/test.sh") (insert full-cmd))
         (if (or (equal exit-code 0) (equal exit-code 1)) ;; i think exit-code 1 is usually for no match
             (dolist (line (split-string out "\n"))
               (when (not (string-empty-p line))
