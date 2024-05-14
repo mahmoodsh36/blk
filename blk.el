@@ -612,7 +612,6 @@ sep is the property :delimiter of the plist CMD"
               exit-code (call-process-shell-command full-cmd nil bfr-name)
               out (with-current-buffer " blk-out" (substring-no-properties (buffer-string)))
               sep (plist-get cmd :delimiter))
-        (with-temp-file (file-truename "~/test.sh") (insert full-cmd))
         (if (or (equal exit-code 0) (equal exit-code 1)) ;; i think exit-code 1 is usually for no match
             (dolist (line (split-string out "\n"))
               (when (not (string-empty-p line))
