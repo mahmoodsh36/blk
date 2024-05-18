@@ -241,9 +241,10 @@ auctex isnt installed and loaded. errors out if theres no latex environment at p
 Returns a cons of the from (beginning . end) for the start/end position of the latex environment
 at point, respectively."
   (save-excursion
+    (forward-char) ;; without this auctex cant find the environment for some reason
     (LaTeX-find-matching-begin)
     (let ((begin (point)))
-      (forward-char) ;; without this auctex cant find \end{} for some reason
+      (forward-char) ;; same as comment above
       (LaTeX-find-matching-end)
       (cons begin (point)))))
 

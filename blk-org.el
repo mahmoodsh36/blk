@@ -125,13 +125,18 @@ org-transclusion to be handled for transclusion in an org buffer."
     (when elm
       (let* ((elm-type (org-element-type elm)))
         (cond
-          ;; handler for custom/src org-blocks
-          ((or (eq elm-type 'special-block) (eq elm-type 'src-block))
-           (list :src-content (buffer-substring (org-element-property :begin elm)
-                                                (org-element-property :end elm))
-                 :src-buf (current-buffer)
-                 :src-beg (org-element-property :begin elm)
-                 :src-end (org-element-property :end elm))))))))
+         ;; handler for custom/src org-blocks
+         ((or (eq elm-type 'special-block) (eq elm-type 'src-block))
+          (list :src-content (buffer-substring (org-element-property :begin elm)
+                                               (org-element-property :end elm))
+                :src-buf (current-buffer)
+                :src-beg (org-element-property :begin elm)
+                :src-end (org-element-property :end elm)))
+         ;; handler for latex blocks identified by #+name
+         ((eq elm-type 'latex-environment)
+          (progn
+            (forward-line)
+            (blk-tex-transclusion-env-at-point grep-data))))))))
 
 (defalias
   'blk-open-at-point
