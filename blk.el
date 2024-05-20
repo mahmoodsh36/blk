@@ -224,7 +224,7 @@ consult the documentation of `blk-patterns' for the keywords.")
 :mode-list is for matching buffer major modes.
 id-format is for inserting the link into a buffer.
 %i will be replaced by the target id.
-%o will be use Org link format to include both the id and title, when given.
+%o will use Org link format to include both the id and title, when given.
 %t will be replaced by the target title, when given.")
 
 (defcustom
@@ -664,50 +664,65 @@ Use the grepper given by `blk-grepper'.  The link format is defined by
 entries in `blk-insert-patterns'."
   (interactive
    (progn (barf-if-buffer-read-only)
-	  (list (let ((minibuffer-allow-text-properties t))
-		  (completing-read "entry " (blk-list-entries))))))
+          (list (let ((minibuffer-allow-text-properties t))
+                  (completing-read "blk: " (blk-list-entries))))))
   (barf-if-buffer-read-only)
-  (if (get-text-property 0 'grep-data text)
-      (let* ((grep-data (get-text-property 0 'grep-data text))
-             (grep-pattern (plist-get grep-data :matched-pattern))
-             (id-pattern (or (cl-find-if (lambda (id-pattern)
-					   (apply #'derived-mode-p (plist-get id-pattern :mode-list)))
-					 blk-insert-patterns)
-			     (cl-find-if (lambda (id-pattern)
-					   ;; Use default pattern, ;; mode-list = nil,
-					   ;; meaning match to any other mode.
-					   (null (plist-get id-pattern :mode-list)))
-					 blk-insert-patterns)))
-             (extract-id-func (plist-get grep-pattern :extract-id-function))
-	     (text-no-properties (substring-no-properties text)))
+  (let ((grep-result (get-text-property 0 'grep-data text)))
+    (if grep-result
         ;; if :extract-id-function isnt provided, we could try making our own that simply
         ;; returns the "src id" of the target to be linked to, although notice that if this is to
         ;; happen, the file might be later loaded into memory for no reason by `blk-with-file-as-current-buffer'
-        (when (not extract-id-func)
-          (let ((src-id-func (plist-get (plist-get grep-data :matched-pattern) :src-id-function)))
-            (when src-id-func
-                (setq extract-id-func
-                      (lambda (grep-data-local)
-                        ;; `grep-data-local' would be the same as `grep-data' anyway
-                        (funcall src-id-func (plist-get grep-data-local :matched-value)))))))
-        (if extract-id-func
-            (let ((id (blk-with-file-as-current-buffer
-                       (plist-get grep-data :filepath)
-                       (goto-char (plist-get grep-data :position))
-                       (funcall extract-id-func grep-data))))
-              (if id
-                  (progn (if (plist-get id-pattern :id-format)
-			     (insert (format-spec (plist-get id-pattern :id-format)
-						  `((?i . ,id)
-						    ;; Org [[link]] or [[link][title]] format
-						    (?o . ,(if (equal id text-no-properties)
-							       id
-							     (concat id "][" text-no-properties)))
-						    (?t . ,text-no-properties))))
-			   (message "No link format match for major-mode found in `blk-insert-patterns'")))
-                (message "Match has no id")))
+        (let ((title (plist-get grep-result :title))
+              (id (blk-extract-id grep-result)))
+          (if id
+              (blk-insert-link id title)
+            (message "Match has no id"))
           (message "Pattern has no `extract-id-function' or `src-id-function'")))
     (message "%s not found" text)))
+
+(defun blk-extract-id (grep-result)
+  "open the file and run the :extract-id-function of the grep rule that was matched to
+obtain the id"
+  (let* ((grep-pattern (plist-get grep-result :matched-pattern))
+         (extract-id-func (plist-get grep-pattern :extract-id-function)))
+    ;; if :extract-id-function isnt provided, we could try making our own that simply
+    ;; returns the "src id" of the target to be linked to, although notice that if this is to
+    ;; happen, the file might be later loaded into memory for no reason by `blk-with-file-as-current-buffer'
+    (when (not extract-id-func)
+      (let ((src-id-func (plist-get (plist-get grep-result :matched-pattern) :src-id-function)))
+        (when src-id-func
+          (setq extract-id-func
+                (lambda (grep-data-local)
+                  ;; `grep-data-local' would be the same as `grep-result' anyway
+                  (funcall src-id-func (plist-get grep-data-local :matched-value)))))))
+    (if extract-id-func
+        (let* ((id (blk-with-file-as-current-buffer
+                    (plist-get grep-result :filepath)
+                    (goto-char (plist-get grep-result :position))
+                    (funcall extract-id-func grep-result))))
+          id)
+      (message "Pattern has no `extract-id-function' or `src-id-function'"))))
+
+(defun blk-insert-link (id title)
+  "Insert a link at the current point with ID and TITLE, using the rule defined
+in `blk-insert-patterns' for the current major mode"
+  (let ((id-pattern (or (cl-find-if (lambda (id-pattern)
+                                      (apply #'derived-mode-p (plist-get id-pattern :mode-list)))
+                                    blk-insert-patterns)
+                        (cl-find-if (lambda (id-pattern)
+                                      ;; Use default pattern, ;; mode-list = nil,
+                                      ;; meaning match to any other mode.
+                                      (null (plist-get id-pattern :mode-list)))
+                                    blk-insert-patterns))))
+    (if (plist-get id-pattern :id-format)
+        (insert (format-spec (plist-get id-pattern :id-format)
+                             `((?i . ,id)
+                               ;; Org [[link]] or [[link][title]] format
+                               (?o . ,(if (equal id title)
+                                          id
+                                        (concat id "][" title)))
+                               (?t . ,title))))
+      (message "No link format match for major-mode found in `blk-insert-patterns'"))))
 
 (defun blk-grep (grepper patterns directories)
   "Run the blk grepper on the given patterns and directories,
@@ -794,17 +809,24 @@ property list describing a shell command, see `blk-grepper-grep',"
     (message "Json isnt available")))
 
 (defun blk-completion-at-point ()
-  "`completion-at-point' function for blk links, should be added to `completion-at-point-functions', may be slow depending on the amount of files you have."
-  (let* ((bounds (bounds-of-thing-at-point 'symbol))
+  (let* ((bounds (bounds-of-thing-at-point 'word))
          (beg (car bounds))
          (end (cdr bounds)))
     (list beg end
-          (completion-table-dynamic
-           (lambda (_)
-             (cl-remove-if-not
-              #'identity
-              (mapcar (lambda (entry) (plist-get entry :id))
-                      (blk-collect-all))))))))
+          (mapcar (lambda (grep-result)
+                    (let ((title (plist-get grep-result :title)))
+                      (when title (propertize title 'grep-result grep-result))))
+                  (blk-collect-all))
+          :exit-function (lambda (str _status)
+                           (let ((grep-result (get-text-property 0 'grep-result str)))
+                             (let ((title (plist-get grep-result :title))
+                                   (id (blk-extract-id grep-result)))
+                               (if id
+                                   (progn
+                                     (delete-char (- (length str)))
+                                     (blk-insert-link id title))
+                                 (message "Match has no id")))))
+          :exclusive 'no)))
 
 (defun blk-enable-completion ()
   "enable completion for ids/titles recognized by blk, by adding the `blk-completion-at-point' function

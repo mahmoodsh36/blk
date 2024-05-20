@@ -77,7 +77,8 @@ Return nil if not found."
              (find-buffer-visiting (plist-get result :filepath))
              (goto-char (plist-get result :position))
              (append payload
-                     (funcall (plist-get (plist-get result :matched-pattern) :transclusion-function) result))))
+                     (funcall (plist-get (plist-get result :matched-pattern) :transclusion-function)
+                              result))))
         (progn (message (format "No transclusion done for this blk.  Ensure it works at point %d, line %d."
                             (point) (org-current-line)))
            nil)))))
@@ -115,7 +116,7 @@ calling grep using GREP-DATA."
                     (org-id-get)))
                   ;; if we are at a header, return its id (might return nil or id of file if header doesnt have id)
                   ((eq elm-type 'headline) (org-id-get)))))
-        (or id (plist-get grep-data :matched-value))))))
+        id))))
 
 (defun blk-org-transclusion-at-point (grep-data)
   "Function that return a DWIM org-transclusion plist.
