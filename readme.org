@@ -86,7 +86,7 @@ and then in another file ~code.el~ what you could do is:
 if you have ~org-transclusion~ enabled, you can also transclude the pattern the link is defined to link to, e.g. in another file ~file3.org~ you can do
 
 #+begin_src org
-  ,#+transclude: blk:def-set
+  ,#+transclude: [[blk:def-set]]
 #+end_src
 
 this will cause the definition block from ~file1.org~ to be "transcluded" (inserted) into the buffer of ~file3.org~ when ~org-transclusion-add-all~ is executed (happens automatically when an org file is opened).
