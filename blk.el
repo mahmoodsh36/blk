@@ -809,7 +809,8 @@ property list describing a shell command, see `blk-grepper-grep',"
     (message "Json isnt available")))
 
 (defun blk-completion-at-point ()
-  (let* ((bounds (bounds-of-thing-at-point 'word))
+  "Completion-at-point function, to be added to `completion-at-poinh-functions'."
+  (let* ((bounds (bounds-of-thing-at-point 'symbol))
          (beg (car bounds))
          (end (cdr bounds)))
     (list beg end
