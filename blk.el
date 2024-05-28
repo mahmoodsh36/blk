@@ -781,7 +781,8 @@ property list describing a shell command, see `blk-grepper-grep',"
      (let* ((pattern (plist-get grep-result :matched-pattern))
             (title-func (plist-get pattern :title-function))
             (matched-value (plist-get grep-result :matched-value))
-            (src-id-func (plist-get pattern :src-id-function)))
+            (src-id-func (plist-get pattern :src-id-function))
+            (dest-id-func (plist-get pattern :dest-id-function)))
        (when title-func
          (plist-put grep-result
                     :title
@@ -790,6 +791,10 @@ property list describing a shell command, see `blk-grepper-grep',"
          (plist-put grep-result
                     :id
                     (funcall src-id-func matched-value)))
+       (when dest-id-func
+         (plist-put grep-result
+                    :dest-id
+                    (funcall dest-id-func matched-value)))
        grep-result)
      grep-result)
    (blk-grep blk-grepper
