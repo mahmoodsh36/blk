@@ -45,9 +45,28 @@ consequences on speed as the current method runs slowly.
 
 a quick benchmark on my machine speaks volumes:
 with `blk-enable-groups` set to `t`
-  (benchmark-run (blk-list-entries)) ; => (0.577957745 2 0.31831121999999823)
+  (benchmark-run (blk-list-titles)) ; => (0.577957745 2 0.31831121999999823)
 with `blk-enable-groups` set to `nil`
-  (benchmark-run (blk-list-entries)) ; => (0.295143048 1 0.15662816200000407)")
+  (benchmark-run (blk-list-titles)) ; => (0.295143048 1 0.15662816200000407)")
+
+(defcustom blk-use-cache nil
+  "Setting to `non-nil' means to use a memory cache.
+This causes blk to use a memory cache to avoid having to run grep everytime
+completion is required which makes the completion functionality more responsive.
+Caching only starts the first time completion is requested, by the function
+`blk-list-titles'.
+The interval for running the grep commands and caching the results is controlled
+by `blk-cache-update-interval'.")
+
+(defcustom blk-cache-update-interval 5
+  "The interval between updates of the memory cache, in seconds.
+this is only meaningful when `blk-use-cache' is `non-nil'")
+
+(defvar blk-cache nil
+  "A list that acts as a cache for the grep results, see `blk-use-cache'.")
+
+(defvar blk-cache-timer nil
+  "A timer returned by `run-with-timer', used for the caching functionality.")
 
 (defcustom blk-emacs-patterns
   (list
@@ -447,13 +466,15 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
    (buffer-list)))
 
 (defun blk-list-entries-with-titles ()
-  "List all the matches blk can find, apply the :title-function to grab the title of each entry."
+  "List all the titled matches blk can find.
+apply the :title-function to grab the title of each entry."
   (let* ((grep-results
           (cl-remove-if-not
            'identity
            (mapcar
             (lambda (grep-result)
-              (let* ((title-func (plist-get (plist-get grep-result :matched-pattern) :title-function))
+              (let* ((title-func (plist-get (plist-get grep-result :matched-pattern)
+                                            :title-function))
                      (matched-value (plist-get grep-result :matched-value))
                      (title (funcall title-func matched-value)))
                 (if (not (string-empty-p (string-trim title)))
@@ -463,20 +484,48 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
                   nil)))
             (blk-grep
              blk-grepper
-             (cl-remove-if-not (lambda (pattern) (plist-get pattern :title-function)) blk-patterns)
+             (cl-remove-if-not (lambda (pattern)
+                                 (plist-get pattern :title-function))
+                               blk-patterns)
              blk-directories)))))
     grep-results))
 
-(defun blk-list-entries ()
-  "List all the pattern matches found in the blk files."
+(defun blk-update-cache ()
+  "Update the cache results stored in `blk-cache'."
+  (setq blk-cache (blk-list-titles-no-cache)))
+
+(defun blk-list-titles-no-cache ()
+  "List titles without using cache, for internal use (e.g. for updating cache)."
   (let* ((grep-results (blk-list-entries-with-titles))
          (groups (if blk-enable-groups (blk-group-entries grep-results) nil))
          (entries (mapcar (lambda (grep-result)
-                            (propertize (plist-get grep-result :title) 'grep-data grep-result))
+                            (propertize (plist-get grep-result :title)
+                                        'grep-data
+                                        grep-result))
                           (append grep-results groups))))
     entries))
 
+(defun blk-list-titles ()
+  "List all the pattern matches found in the blk files, as propertized strings.
+each string is a title, with the property `grep-data' set to the match data."
+  (let ((titles))
+    ;; if we have cached results, use those
+    (when blk-use-cache
+      ;; if we dont have cached results and the timer isnt set, fetch the results then start a new timer
+      (when (not blk-cache-timer)
+        (blk-update-cache)
+        (setq blk-cache-timer (run-with-timer blk-cache-update-interval
+                                              blk-cache-update-interval
+                                              #'blk-update-cache)))
+      (setq titles blk-cache))
+    (when (not titles)
+      ;; this would run if cache isnt enabled
+      (setq titles (blk-list-titles-no-cache)))
+    titles))
+
 (defun blk-group-entries (grep-results)
+  "Given GREP-RESULTS, construct groupings (or outlines, if you will) out of them.
+the groupings rules are defined in `blk-groups'"
   (let* ((files-entries) ;; maps each file to its entries
          (final-groups))
     (dolist (result grep-results)
@@ -487,7 +536,9 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
           (push (cons result-file (list result)) files-entries))))
     ;; sort the grep entries of each file by their positions
     (dolist (file-entries files-entries)
-      (setcdr file-entries (cl-sort (cdr file-entries) '< :key (lambda (entry) (plist-get entry :position)))))
+      (setcdr file-entries (cl-sort (cdr file-entries)
+                                    '<
+                                    :key (lambda (entry) (plist-get entry :position)))))
     ;; gather the groups
     (dolist (group blk-groups)
       (dolist (file-entries files-entries)
@@ -639,7 +690,7 @@ sep is the property :delimiter of the plist CMD"
 Select one and visit it."
   (interactive
    (list (let* ((minibuffer-allow-text-properties t)
-                (entries (blk-list-entries))
+                (entries (blk-list-titles))
                 (completion-extra-properties
                  '(:annotation-function
                    (lambda (key)
@@ -665,7 +716,7 @@ entries in `blk-insert-patterns'."
   (interactive
    (progn (barf-if-buffer-read-only)
           (list (let ((minibuffer-allow-text-properties t))
-                  (completing-read "blk: " (blk-list-entries))))))
+                  (completing-read "blk: " (blk-list-titles))))))
   (barf-if-buffer-read-only)
   (let ((grep-result (get-text-property 0 'grep-data text)))
     (if grep-result
@@ -814,15 +865,12 @@ property list describing a shell command, see `blk-grepper-grep',"
     (message "Json isnt available")))
 
 (defun blk-completion-at-point ()
-  "Completion-at-point function, to be added to `completion-at-poinh-functions'."
+  "Completion-at-point function, to be added to `completion-at-point-functions'."
   (let* ((bounds (bounds-of-thing-at-point 'symbol))
          (beg (car bounds))
          (end (cdr bounds)))
     (list beg end
-          (mapcar (lambda (grep-result)
-                    (let ((title (plist-get grep-result :title)))
-                      (when title (propertize title 'grep-result grep-result))))
-                  (blk-collect-all))
+          (blk-list-titles)
           :exit-function (lambda (str _status)
                            (let ((grep-result (get-text-property 0 'grep-result str)))
                              (let ((title (plist-get grep-result :title))
