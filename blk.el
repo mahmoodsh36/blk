@@ -58,7 +58,7 @@ Caching only starts the first time completion is requested, by the function
 The interval for running the grep commands and caching the results is controlled
 by `blk-cache-update-interval'.")
 
-(defcustom blk-cache-update-interval 5
+(defcustom blk-cache-update-interval 10
   "The interval between updates of the memory cache, in seconds.
 this is only meaningful when `blk-use-cache' is `non-nil'")
 
