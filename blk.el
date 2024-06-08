@@ -728,9 +728,8 @@ entries in `blk-insert-patterns'."
               (id (blk-extract-id grep-result)))
           (if id
               (blk-insert-link id title)
-            (message "Match has no id"))
-          (message "Pattern has no `extract-id-function' or `src-id-function'")))
-    (message "%s not found" text)))
+            (message "Match has no id")))
+      (message "%s not found" text))))
 
 (defun blk-extract-id (grep-result)
   "open the file and run the :extract-id-function of the grep rule that was matched to
@@ -753,7 +752,9 @@ obtain the id"
                     (goto-char (plist-get grep-result :position))
                     (funcall extract-id-func grep-result))))
           id)
-      (message "Pattern has no `extract-id-function' or `src-id-function'"))))
+      (progn
+        (message "Pattern has no `extract-id-function' or `src-id-function'")
+        nil))))
 
 (defun blk-insert-link (id title)
   "Insert a link at the current point with ID and TITLE, using the rule defined
@@ -873,7 +874,7 @@ property list describing a shell command, see `blk-grepper-grep',"
     (list beg end
           (blk-list-titles)
           :exit-function (lambda (str _status)
-                           (let ((grep-result (get-text-property 0 'grep-result str)))
+                           (let ((grep-result (get-text-property 0 'grep-data str)))
                              (let ((title (plist-get grep-result :title))
                                    (id (blk-extract-id grep-result)))
                                (if id
