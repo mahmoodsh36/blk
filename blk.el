@@ -492,6 +492,7 @@ apply the :title-function to grab the title of each entry."
 
 (defun blk-update-cache ()
   "Update the cache results stored in `blk-cache'."
+  (interactive)
   (setq blk-cache (blk-list-titles-no-cache)))
 
 (defun blk-list-titles-no-cache ()
