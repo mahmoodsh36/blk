@@ -100,7 +100,7 @@ calling grep using GREP-DATA."
       (let* ((elm-type (org-element-type elm))
              (id (cond
                   ;; if we are at a block and it has a name, return that, otherwise return the link to the file
-                  ((and (member elm-type '(special-block latex-environment)) block-name)
+                  ((and (member elm-type '(special-block latex-environment src-block)) block-name)
                    block-name)
                   ;; for links to files, through org-id or denote #+identifier
                   ((or (eq elm-type 'keyword)
