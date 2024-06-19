@@ -75,53 +75,100 @@ Non-nil means enable this feature (e.g. you can use a link like [[blk:entry-titl
 This may have undesirable effects since two different entries can have
 the same title, which is why id's are useful in the first place.")
 
+;; rules for the "emacs grepper"
+(defvar blk-emacs-org-file-rule
+  (list :shared-name 'blk-org-file-rule
+        :title "org file"
+        :anchor-regex "\\(#\\+title:\\|#\\+alias:\\)\s+[^\n:]+"
+        :title-function 'blk-value-after-space
+        :extract-id-function 'blk-org-id-at-point
+        :glob "*.org")
+  "Used in `blk-emacs-patterns' to match titles of org files.
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-org-block-rule
+  (list :shared-name 'blk-org-block-rule
+        :title "org block"
+        :anchor-regex "\\(:title\\|:alias\\|:name\\|#\\+name:\\)\s+[^\n:]+"
+        :title-function 'blk-value-after-space
+        :extract-id-function 'blk-org-id-at-point
+        :glob "*.org")
+  "Used in `blk-emacs-patterns' to match titles of org blocks.
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-elisp-function-rule
+  (list :title "elisp function"
+        :glob "*.el"
+        :anchor-regex "^(defun\s+[^\s]+"
+        :title-function 'blk-value-after-space)
+  "Used in `blk-emacs-patterns' to match names of elisp functions.
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-org-header-rule
+  (list :shared-name 'blk-org-header-rule
+        :title "org header"
+        :glob "*.org"
+        :anchor-regex "^\\*+ .*"
+        :title-function 'blk-value-after-space
+        :extract-id-function 'blk-org-id-at-point)
+  "Used in `blk-emacs-patterns' to match org headings.
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-org-id-rule
+  (list :glob "*.org"
+        :anchor-regex "^:ID:\\s*.*"
+        :src-id-function 'blk-org-id-value)
+  "Used in `blk-emacs-patterns' to match ids of org headings or files.
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-org-link-rule
+  (list :glob "*.org"
+        :anchor-regex org-link-any-re
+        :dest-id-function 'blk-org-link-path)
+  "Used in `blk-emacs-patterns' to match links in org-mode files.
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-denote-identifier-rule
+  (list :glob "*.org"
+        :anchor-regex "#\\+identifier:\s+.*"
+        :src-id-function 'blk-value-after-colon)
+  "Used in `blk-emacs-patterns' to match ids inserted by denote into org-mode files.
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-latex-label-rule
+  (list :title "latex label"
+        :glob '("*.org" "*.tex")
+        :anchor-regex "\\\\label{[^\\{\\}]*}"
+        :src-id-function 'blk-latex-label-id
+        :title-function 'blk-latex-label-id
+        :transclusion-function 'blk-tex-transclusion-env-at-point)
+  "Used in `blk-emacs-patterns' to match latex labels
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-org-block-name-rule
+  (list :shared-name 'blk-org-block-rule
+        :title "id anchor for org named block"
+        :glob "*.org"
+        :anchor-regex "#\\+name:\s+.*|:name\s+[^\n:]*"
+        :src-id-function 'blk-value-after-space-upto-colon
+        :transclusion-function 'blk-org-transclusion-at-point)
+  "Used in `blk-emacs-patterns' to match names of org-mode blocks
+consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-md-header-rule
+  (list :shared-name 'blk-md-header-rule
+        :title "markdown header"
+        :glob "*.md"
+        :anchor-regex "^#+ .*"
+        :title-function 'blk-value-after-space)
+  "Used in `blk-emacs-patterns' to match markdown headings.
+consult the documentation of `blk-patterns' for the keywords.")
+
 (defcustom blk-emacs-patterns
-  (list
-   (list :title "org block"
-         :anchor-regex "\\(:title\\|:alias\\|:name\\|#\\+name:\\)\s+[^:]+"
-         :title-function 'blk-value-after-space
-         :extract-id-function 'blk-org-id-at-point
-         :glob "*.org")
-   (list :title "org file"
-         :anchor-regex "\\(#\\+title:\\|#\\+alias:\\)\s+[^:]+"
-         :title-function 'blk-value-after-space
-         :extract-id-function 'blk-org-id-at-point
-         :glob "*.org")
-   (list :title "elisp function"
-         :glob "*.el"
-         :anchor-regex "^(defun\s+[^\s]+"
-         :title-function 'blk-value-after-space)
-   (list :title "org header"
-         :glob "*.org"
-         :anchor-regex "^\\*+ .*"
-         :title-function 'blk-value-after-space
-         :extract-id-function 'blk-org-id-at-point)
-   (list :glob "*.org"
-         :anchor-regex "^:ID:\\s*.*"
-         :src-id-function 'blk-org-id-value)
-   (list :glob "*.org"
-         :anchor-regex org-link-any-re
-         :dest-id-function 'blk-org-link-path)
-   (list :glob "*.org"
-         :anchor-regex "#\\+identifier:\s+.*"
-         :src-id-function 'blk-value-after-colon)
-   (list :title "latex label"
-         :glob '("*.org" "*.tex")
-         :anchor-regex "\\\\label{[^\\{\\}]*}"
-         :src-id-function 'blk-latex-label-id
-         :title-function 'blk-latex-label-id
-         :transclusion-function 'blk-tex-transclusion-env-at-point)
-   (list :title "id anchor for org named block"
-         :glob "*.org"
-         :anchor-regex "#\\+name:\\s+.*|:name\\s+[^:]*"
-         :src-id-function 'blk-value-after-space-upto-colon
-         :transclusion-function 'blk-org-transclusion-at-point)
-   (list :title "markdown header"
-         :glob "*.md"
-         :anchor-regex "^#+ .*"
-         :title-function 'blk-value-after-space))
+  (list blk-emacs-org-file-rule
+        blk-emacs-org-block-rule
+        blk-emacs-elisp-function-rule
+        blk-emacs-org-header-rule
+        blk-emacs-org-id-rule
+        blk-emacs-org-link-rule
+        blk-emacs-denote-identifier-rule
+        blk-emacs-latex-label-rule
+        blk-emacs-org-block-name-rule
+        blk-emacs-md-header-rule)
   "The pattern table for the elisp grepper; see documentation for `blk-patterns'.")
 
+;; rules for ripgrep
 (defvar blk-rg-org-file-rule
   (list :shared-name 'blk-org-file-rule
         :title "org file"
@@ -214,6 +261,11 @@ consult the documentation of `blk-patterns' for the keywords.")
         blk-rg-md-header-rule)
   "The pattern table for ripgrep; see documentation for `blk-patterns'.")
 
+;; grep -E plays well with ripgrep regex's so as far as i can tell no extra work is needed
+(defcustom blk-grep-patterns
+  blk-rg-patterns
+  "The pattern table for `blk-grepper-grep'.")
+
 (defcustom blk-groups
   (list (list :title "org mode file/header outline"
               :title-group-function 'join-with-slash
@@ -233,11 +285,6 @@ consult the documentation of `blk-patterns' for the keywords.")
 (defun join-with-slash (strings)
   "Join STRINGS with forward slash."
   (string-join strings "/"))
-
-;; grep -E plays well with rg regex's so as far as i can tell no extra work is needed
-(defcustom blk-grep-patterns
-  blk-rg-patterns
-  "The pattern table for blk-grepper-grep .")
 
 ;; Support insertion into editable non-file buffers too.
 (defcustom blk-insert-patterns
@@ -310,7 +357,10 @@ returns a plist that is then passed to org-transclusion"
   (string-trim (string-join (cdr (split-string str " ")) " ")))
 
 (defun blk-org-link-path (org-link-text)
-  (string-trim (car (split-string (cadr (split-string org-link-text ":")) "]"))))
+  "Parse the text of an org link and return the id (path) it links to."
+  ;; if a link doesnt contain a colon dont try to parse it
+  (when (cl-find ":" org-link-text)
+    (string-trim (car (split-string (cadr (split-string org-link-text ":")) "]")))))
 
 (defun blk-org-id-value (org-id-text)
   (string-trim (caddr (split-string org-id-text ":"))))
@@ -351,7 +401,7 @@ If none are found, default to the `blk-grepper-emacs' function."
   (cond
       ((locate-file "rg" exec-path) blk-grepper-rg)
       ((locate-file "grep" exec-path) blk-grepper-grep)
-      (_ blk-grepper-emacs)))
+      (_ 'blk-grepper-emacs)))
 
 (defcustom blk-grepper
   (blk-choose-grepper)
