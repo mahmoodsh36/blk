@@ -68,6 +68,13 @@ this is only meaningful when `blk-use-cache' is `non-nil'")
 (defvar blk-cache-timer nil
   "A timer returned by `run-with-timer', used for the caching functionality.")
 
+(defcustom blk-treat-titles-as-ids t
+  "Whether to enable identifying entries by their titles.
+
+Non-nil means enable this feature (e.g. you can use a link like [[blk:entry-title]]).
+This may have undesirable effects since two different entries can have
+the same title, which is why id's are useful in the first place.")
+
 (defcustom blk-emacs-patterns
   (list
    (list :title "org block"
@@ -817,14 +824,10 @@ property list describing a shell command, see `blk-grepper-grep',"
          (grep-results
           (cl-remove-if-not
            (lambda (entry)
-             (equal (plist-get entry :id) id))
-           (mapcar
-            (lambda (grep-result)
-              (plist-put grep-result
-                         :id
-                         (funcall (plist-get (plist-get grep-result :matched-pattern) :src-id-function)
-                                  (plist-get grep-result :matched-value))))
-            (blk-grep blk-grepper id-patterns blk-directories)))))
+             (or
+              (equal (plist-get entry :id) id)
+              (when blk-treat-titles-as-ids (equal (plist-get entry :title) id))))
+           (blk-collect-all))))
     grep-results))
 
 (defun blk-collect-all ()
