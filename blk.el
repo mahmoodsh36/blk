@@ -783,6 +783,10 @@ entries in `blk-insert-patterns'."
         ;; happen, the file might be later loaded into memory for no reason by `blk-with-file-as-current-buffer'
         (let ((title (plist-get grep-result :title))
               (id (blk-extract-id grep-result)))
+          (when (and title
+                     (not id)
+                     blk-treat-titles-as-ids)
+            (setq id title))
           (if id
               (blk-insert-link id title)
             (message "Match has no id")))
@@ -930,6 +934,10 @@ property list describing a shell command, see `blk-grepper-grep',"
                            (let ((grep-result (get-text-property 0 'grep-data str)))
                              (let ((title (plist-get grep-result :title))
                                    (id (blk-extract-id grep-result)))
+                               (when (and title
+                                          (not id)
+                                          blk-treat-titles-as-ids)
+                                 (setq id title))
                                (if id
                                    (progn
                                      (delete-char (- (length str)))
