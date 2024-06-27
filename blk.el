@@ -359,7 +359,7 @@ returns a plist that is then passed to org-transclusion"
 (defun blk-org-link-path (org-link-text)
   "Parse the text of an org link and return the id (path) it links to."
   ;; if a link doesnt contain a colon dont try to parse it
-  (when (cl-find ":" org-link-text)
+  (when (cl-search ":" org-link-text)
     (string-trim (car (split-string (cadr (split-string org-link-text ":")) "]")))))
 
 (defun blk-org-id-value (org-id-text)
