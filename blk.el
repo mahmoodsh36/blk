@@ -122,11 +122,12 @@ consult the documentation of `blk-patterns' for the keywords.")
         :dest-id-function 'blk-org-link-path)
   "Used in `blk-emacs-patterns' to match links in org-mode files.
 consult the documentation of `blk-patterns' for the keywords.")
-(defvar blk-emacs-denote-identifier-rule
-  (list :glob "*.org"
+(defvar blk-emacs-identifier-rule
+  (list :shared-name 'blk-org-file-rule
+        :glob "*.org"
         :anchor-regex "#\\+identifier:\s+.*"
         :src-id-function 'blk-value-after-colon)
-  "Used in `blk-emacs-patterns' to match ids inserted by denote into org-mode files.
+  "Used in `blk-emacs-patterns' to match ids (similar to those inserted by denote) of org-mode files.
 consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-emacs-latex-label-rule
   (list :title "latex label"
@@ -162,7 +163,7 @@ consult the documentation of `blk-patterns' for the keywords.")
         blk-emacs-org-header-rule
         blk-emacs-org-id-rule
         blk-emacs-org-link-rule
-        blk-emacs-denote-identifier-rule
+        blk-emacs-identifier-rule
         blk-emacs-latex-label-rule
         blk-emacs-org-block-name-rule
         blk-emacs-md-header-rule)
@@ -215,11 +216,12 @@ consult the documentation of `blk-patterns' for the keywords.")
         :dest-id-function 'blk-org-link-path)
   "Used in `blk-rg-patterns' to match links in org-mode files.
 consult the documentation of `blk-patterns' for the keywords.")
-(defvar blk-rg-denote-identifier-rule
-  (list :glob "*.org"
+(defvar blk-rg-identifier-rule
+  (list :shared-name 'blk-org-file-rule
+        :glob "*.org"
         :anchor-regex "#\\+identifier:\\s+.*"
         :src-id-function 'blk-value-after-colon)
-  "Used in `blk-rg-patterns' to match ids inserted by denote into org-mode files.
+  "Used in `blk-rg-patterns' to match ids (similar to those inserted by denote.el) of org-mode files.
 consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-latex-label-rule
   (list :title "latex label"
@@ -255,7 +257,7 @@ consult the documentation of `blk-patterns' for the keywords.")
         blk-rg-org-header-rule
         blk-rg-org-id-rule
         blk-rg-org-link-rule
-        blk-rg-denote-identifier-rule
+        blk-rg-identifier-rule
         blk-rg-latex-label-rule
         blk-rg-org-block-name-rule
         blk-rg-md-header-rule)
