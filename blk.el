@@ -932,6 +932,13 @@ property list describing a shell command, see `blk-grepper-grep',"
          (end (cdr bounds)))
     (list beg end
           (blk-list-titles)
+          :annotation-function
+          (lambda (key)
+            (let ((grep-result (get-text-property 0 'grep-data key)))
+              (when (plist-get grep-result :matched-pattern)
+                (format "\t%s"
+                        (plist-get (plist-get grep-result :matched-pattern)
+                                   :title)))))
           :exit-function (lambda (str _status)
                            (let ((grep-result (get-text-property 0 'grep-data str)))
                              (let ((title (plist-get grep-result :title))
