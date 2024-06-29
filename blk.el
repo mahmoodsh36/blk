@@ -560,8 +560,7 @@ apply the :title-function to grab the title of each entry."
          (groups (if blk-enable-groups (blk-group-entries grep-results) nil))
          (entries (mapcar (lambda (grep-result)
                             (propertize (plist-get grep-result :title)
-                                        'grep-data
-                                        grep-result))
+                                        'grep-data grep-result))
                           (append grep-results groups))))
     entries))
 
@@ -756,9 +755,11 @@ Select one and visit it."
                    (lambda (key)
                      (let ((grep-result (get-text-property 0 'grep-data key)))
                        (when (plist-get grep-result :matched-pattern)
-                         (format "\t%s"
-                                 (plist-get (plist-get grep-result :matched-pattern)
-                                            :title))))))))
+                         (propertize
+                          (format "\t%s"
+                                  (plist-get (plist-get grep-result :matched-pattern)
+                                             :title))
+                          'face 'font-lock-keyword-face)))))))
            (when entries (completing-read "entry " entries)))))
   (when text
     (if (get-text-property 0 'grep-data text)
