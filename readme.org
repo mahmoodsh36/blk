@@ -27,8 +27,7 @@ basic installation with the basic features
     :after (org)
     :config
     (setq blk-directories
-          (list (expand-file-name "~/notes")
-                (file-name-parent-directory (expand-file-name user-init-file))))
+          (list (expand-file-name "~/notes")))
     (add-hook 'org-mode-hook #'blk-enable-completion)
     (setq blk-use-cache t)
     (global-set-key (kbd "C-c o") #'blk-open-at-point)
@@ -48,8 +47,7 @@ basic installation with ~org-transclusion~ "integration"
     :after (org org-transclusion)
     :config
     (setq blk-directories
-          (list (expand-file-name "~/notes")
-                (file-name-parent-directory (expand-file-name user-init-file))))
+          (list (expand-file-name "~/notes")))
     (add-hook 'org-mode-hook #'blk-enable-completion)
     (setq blk-use-cache t)
     (blk-configure-org-transclusion)
