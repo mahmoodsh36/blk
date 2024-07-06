@@ -1,5 +1,6 @@
 #+title:      blk
 blk, fancily put, is a package for interlinking arbitrary blocks of text, with an emphasis on org mode.
+
 note that blk is still a WIP, but it already provides most the functionality that i had in mind (initially) as it is.
 * usage demo
 
