@@ -75,6 +75,9 @@ Non-nil means enable this feature (e.g. you can use a link like [[blk:entry-titl
 This may have undesirable effects since two different entries can have
 the same title, which is why id's are useful in the first place.")
 
+(defvar blk-hist nil
+  "History list, passed to `completing-read'")
+
 ;; rules for the "emacs grepper"
 (defvar blk-emacs-org-file-rule
   (list :shared-name 'blk-org-file-rule
@@ -760,7 +763,7 @@ Select one and visit it."
                                   (plist-get (plist-get grep-result :matched-pattern)
                                              :title))
                           'face 'font-lock-keyword-face)))))))
-           (when entries (completing-read "entry " entries)))))
+           (when entries (completing-read "entry " entries nil nil nil 'blk-hist)))))
   (when text
     (if (get-text-property 0 'grep-data text)
         (let* ((grep-data (get-text-property 0 'grep-data text))
@@ -777,7 +780,7 @@ entries in `blk-insert-patterns'."
   (interactive
    (progn (barf-if-buffer-read-only)
           (list (let ((minibuffer-allow-text-properties t))
-                  (completing-read "blk: " (blk-list-titles))))))
+                  (completing-read "blk: " (blk-list-titles) nil nil nil 'blk-hist)))))
   (barf-if-buffer-read-only)
   (let ((grep-result (get-text-property 0 'grep-data text)))
     (if grep-result
