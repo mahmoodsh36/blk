@@ -1,5 +1,6 @@
 #+title:      emacs blk package
 #+description: a package for interlinking arbitrary blocks of text, with an emphasis on org mode
+note that blk is still a WIP, but it already provides most the functionality that i had in mind (initially) as it is.
 * usage demo
 
 https://github.com/mahmoodsheikh36/blk/assets/33814416/3676c7b1-6e72-4ae1-a4cc-9b8709a21e65
@@ -29,6 +30,7 @@ basic installation with the basic features
           (list (expand-file-name "~/notes")
                 (file-name-parent-directory (expand-file-name user-init-file))))
     (add-hook 'org-mode-hook #'blk-enable-completion)
+    (setq blk-use-cache t)
     (global-set-key (kbd "C-c o") #'blk-open-at-point)
     (global-set-key (kbd "C-c f") #'blk-find)
     (global-set-key (kbd "C-c i") #'blk-insert))
@@ -49,6 +51,7 @@ basic installation with ~org-transclusion~ "integration"
           (list (expand-file-name "~/notes")
                 (file-name-parent-directory (expand-file-name user-init-file))))
     (add-hook 'org-mode-hook #'blk-enable-completion)
+    (setq blk-use-cache t)
     (blk-configure-org-transclusion)
     (global-set-key (kbd "C-c o") #'blk-open-at-point)
     (global-set-key (kbd "C-c f") #'blk-find)
