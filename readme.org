@@ -136,10 +136,8 @@ see the documentation of ~blk-patterns~ for what each property is for.
 if something like ~consult-grep~ is enough for you, and you dont need to make links to specific locations in your files or notes, then this package isnt for you, what it does is that it takes the idea of writing links to other files and extends it to more than just files, it allows for making links to arbitrary blocks of text and transcluding them from one file into another, the transclusion part is to avoid copying for example one equation from an org file into another, you can simply transclude it by its id, this reduces work and keeps the equation in the different files in sync (when the source is edited).
 note that ~org-transclusion~ on its own can handle blocks of text, but you would have to write the filename explicitly, specify what to search for in the file, and what exactly to transclude, ~blk~ abstracts this hassle away and allows for unambiguous transclusions (as long as the destination's id is unique).
 * todo
-** completion-at-point
 ** org-roam backlink buffer integration
 ** denote backlink buffer integration
-** rules for markdown files
 ** rules for file names without needing to grep them (similar to what denote does)
 ** efficiency concerns
 ** capture templates
