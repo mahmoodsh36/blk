@@ -95,7 +95,8 @@ calling grep using GREP-DATA."
               (alist-get ;; for :name in #+begin_something :name...
                :name
                (org-babel-parse-header-arguments
-                (org-element-property :parameters elm))))))
+                (org-element-property :parameters elm)
+                t)))))
     (when elm
       (let* ((elm-type (org-element-type elm))
              (id (cond
