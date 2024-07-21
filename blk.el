@@ -223,7 +223,8 @@ consult the documentation of `blk-patterns' for the keywords.")
   (list :shared-name 'blk-org-file-rule
         :glob "*.org"
         :anchor-regex "#\\+identifier:\\s+.*"
-        :src-id-function 'blk-value-after-colon)
+        :src-id-function 'blk-value-after-colon
+        :transclusion-function 'blk-org-transclusion-at-point)
   "Used in `blk-rg-patterns' to match ids (similar to those inserted by denote.el) of org-mode files.
 consult the documentation of `blk-patterns' for the keywords.")
 (defvar blk-rg-latex-label-rule
@@ -532,24 +533,10 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
 apply the :title-function to grab the title of each entry."
   (let* ((grep-results
           (cl-remove-if-not
-           'identity
-           (mapcar
-            (lambda (grep-result)
-              (let* ((title-func (plist-get (plist-get grep-result :matched-pattern)
-                                            :title-function))
-                     (matched-value (plist-get grep-result :matched-value))
-                     (title (funcall title-func matched-value)))
-                (if (not (string-empty-p (string-trim title)))
-                    (plist-put grep-result
-                               :title ;; :title of match not to be confused with :title of the matched pattern
-                               title)
-                  nil)))
-            (blk-grep
-             blk-grepper
-             (cl-remove-if-not (lambda (pattern)
-                                 (plist-get pattern :title-function))
-                               blk-patterns)
-             blk-directories)))))
+           (lambda (grep-result)
+             (let* ((title (plist-get grep-result :title)))
+               (and title (not (string-empty-p (string-trim title))))))
+           (blk-collect-all))))
     grep-results))
 
 (defun blk-update-cache ()
@@ -876,6 +863,17 @@ property list describing a shell command, see `blk-grepper-grep',"
 
 (defun blk-find-by-id (id)
   "Return the file and position of a blk link ID."
+  (if blk-use-cache
+      (cl-remove-if-not
+       (lambda (entry)
+         (or
+          (equal (plist-get entry :id) id)
+          (when blk-treat-titles-as-ids (equal (plist-get entry :title) id))))
+       (mapcar (lambda (title) (get-text-property 0 'grep-data title)) blk-cache))
+    (blk-find-by-id-no-cache id)))
+
+(defun blk-find-by-id-no-cache (id)
+  "Return the file and position of a blk link ID without cache usage."
   (let* ((id-patterns
           (cl-remove-if-not
            (lambda (pattern)

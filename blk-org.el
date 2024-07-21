@@ -138,7 +138,18 @@ org-transclusion to be handled for transclusion in an org buffer."
          ((eq elm-type 'latex-environment)
           (progn
             (forward-line)
-            (blk-tex-transclusion-env-at-point grep-data))))))))
+            (blk-tex-transclusion-env-at-point grep-data)))
+         ((and (equal elm-type 'keyword)
+               (equal (org-element-property :key elm) "IDENTIFIER"))
+          ;; skip over the file keywords
+          (save-excursion
+            (while (equal (org-element-type (org-element-at-point)) 'keyword)
+              (forward-line))
+            (list :src-content (buffer-substring (point)
+                                                 (point-max))
+                  :src-buf (current-buffer)
+                  :src-beg (point)
+                  :src-end (point-max)))))))))
 
 (defalias
   'blk-open-at-point
