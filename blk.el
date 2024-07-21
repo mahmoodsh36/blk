@@ -528,25 +528,19 @@ Recurse subdirectories if `blk-search-recursively' is non-nil."
        (string-match-p (wildcard-to-regexp glob) (buffer-file-name buf))))
    (buffer-list)))
 
-(defun blk-list-entries-with-titles ()
-  "List all the titled matches blk can find.
-apply the :title-function to grab the title of each entry."
+(defun blk-update-cache ()
+  "Update the cache results stored in `blk-cache'."
+  (interactive)
+  (setq blk-cache (blk-collect-all)))
+
+(defun blk-list-titles-helper (data)
+  "List all titles in DATA as propertized strings."
   (let* ((grep-results
           (cl-remove-if-not
            (lambda (grep-result)
              (let* ((title (plist-get grep-result :title)))
                (and title (not (string-empty-p (string-trim title))))))
-           (blk-collect-all))))
-    grep-results))
-
-(defun blk-update-cache ()
-  "Update the cache results stored in `blk-cache'."
-  (interactive)
-  (setq blk-cache (blk-list-titles-no-cache)))
-
-(defun blk-list-titles-no-cache ()
-  "List titles without using cache, for internal use (e.g. for updating cache)."
-  (let* ((grep-results (blk-list-entries-with-titles))
+           data))
          (groups (if blk-enable-groups (blk-group-entries grep-results) nil))
          (entries (mapcar (lambda (grep-result)
                             (propertize (plist-get grep-result :title)
@@ -566,10 +560,10 @@ each string is a title, with the property `grep-data' set to the match data."
         (setq blk-cache-timer (run-with-timer blk-cache-update-interval
                                               blk-cache-update-interval
                                               #'blk-update-cache)))
-      (setq titles blk-cache))
+      (setq titles (blk-list-titles-helper blk-cache)))
     (when (not titles)
       ;; this would run if cache isnt enabled
-      (setq titles (blk-list-titles-no-cache)))
+      (setq titles (blk-list-titles-helper (blk-collect-all))))
     titles))
 
 (defun blk-group-entries (grep-results)
@@ -612,6 +606,7 @@ the groupings rules are defined in `blk-groups'"
     final-groups))
 
 (defun blk-group-entries-helper (grep-results rule-names)
+  "A helper for `blk-group-entries'."
   (if rule-names
       (if grep-results
           (let ((groups)
@@ -864,28 +859,18 @@ property list describing a shell command, see `blk-grepper-grep',"
 (defun blk-find-by-id (id)
   "Return the file and position of a blk link ID."
   (if blk-use-cache
-      (cl-remove-if-not
-       (lambda (entry)
-         (or
-          (equal (plist-get entry :id) id)
-          (when blk-treat-titles-as-ids (equal (plist-get entry :title) id))))
-       (mapcar (lambda (title) (get-text-property 0 'grep-data title)) blk-cache))
-    (blk-find-by-id-no-cache id)))
+      (blk-find-by-id-helper blk-cache id)
+    (blk-find-by-id-helper (blk-collect-all) id)))
 
-(defun blk-find-by-id-no-cache (id)
-  "Return the file and position of a blk link ID without cache usage."
-  (let* ((id-patterns
-          (cl-remove-if-not
-           (lambda (pattern)
-             (plist-get pattern :src-id-function))
-           blk-patterns))
-         (grep-results
+(defun blk-find-by-id-helper (data id)
+  "Return the file and position of a blk link ID in DATA."
+  (let* ((grep-results
           (cl-remove-if-not
            (lambda (entry)
              (or
               (equal (plist-get entry :id) id)
               (when blk-treat-titles-as-ids (equal (plist-get entry :title) id))))
-           (blk-collect-all))))
+           data)))
     grep-results))
 
 (defun blk-collect-all ()
