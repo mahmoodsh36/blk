@@ -158,6 +158,16 @@ consult the documentation of `blk-patterns' for the keywords.")
         :title-function 'blk-value-after-space)
   "Used in `blk-emacs-patterns' to match markdown headings.
 consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-emacs-org-named-target-rule
+  (list :shared-name 'blk-org-named-target-rule
+        :title "named target"
+        :glob "*.org"
+        :anchor-regex "<<<.*?>>>"
+        :src-id-function 'blk-org-named-target-value
+        :title-function 'blk-org-named-target-value)
+  "Used in `blk-emacs-patterns' to match named targets.
+named targets are arbitrarily placed targets in the format of <<<my-target>>>.
+consult the documentation of `blk-patterns' for the keywords.")
 
 (defcustom blk-emacs-patterns
   (list blk-emacs-org-file-rule
@@ -169,7 +179,8 @@ consult the documentation of `blk-patterns' for the keywords.")
         blk-emacs-identifier-rule
         blk-emacs-latex-label-rule
         blk-emacs-org-block-name-rule
-        blk-emacs-md-header-rule)
+        blk-emacs-md-header-rule
+        blk-emacs-org-named-target-rule)
   "The pattern table for the elisp grepper; see documentation for `blk-patterns'.")
 
 ;; rules for ripgrep
@@ -253,6 +264,16 @@ consult the documentation of `blk-patterns' for the keywords.")
         :title-function 'blk-value-after-space)
   "Used in `blk-rg-patterns' to match markdown headings.
 consult the documentation of `blk-patterns' for the keywords.")
+(defvar blk-rg-org-named-target-rule
+  (list :shared-name 'blk-org-named-target-rule
+        :title "named target"
+        :glob "*.org"
+        :anchor-regex "<<<.*?>>>"
+        :src-id-function 'blk-org-named-target-value
+        :title-function 'blk-org-named-target-value)
+  "Used in `blk-rg-patterns' to match named targets.
+named targets are arbitrarily placed targets in the format of <<<my-target>>>.
+consult the documentation of `blk-patterns' for the keywords.")
 
 (defcustom blk-rg-patterns
   (list blk-rg-org-file-rule
@@ -264,7 +285,8 @@ consult the documentation of `blk-patterns' for the keywords.")
         blk-rg-identifier-rule
         blk-rg-latex-label-rule
         blk-rg-org-block-name-rule
-        blk-rg-md-header-rule)
+        blk-rg-md-header-rule
+        blk-rg-org-named-target-rule)
   "The pattern table for ripgrep; see documentation for `blk-patterns'.")
 
 ;; grep -E plays well with ripgrep regex's so as far as i can tell no extra work is needed

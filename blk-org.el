@@ -151,6 +151,10 @@ org-transclusion to be handled for transclusion in an org buffer."
                   :src-beg (point)
                   :src-end (point-max)))))))))
 
+(defun blk-org-named-target-value (str)
+  "For an STR equal to <<<my-target>>>, returns my-target."
+  (substring str 3 -3))
+
 (defalias
   'blk-open-at-point
   'org-open-at-point-global
