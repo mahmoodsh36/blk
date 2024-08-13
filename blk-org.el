@@ -39,12 +39,8 @@
 
 (defun blk-org-open (link _)
   "Open the file containing a block with the LINK id."
-  (let ((result (car (blk-find-by-id link))))
-    (if result
-        (progn
-          (find-file (plist-get result :filepath))
-          (goto-char (plist-get result :position)))
-      (message "id %s not found" link))))
+  (when (not (blk-open-by-id link))
+    (message "id %s not found" link)))
 
 (defun blk-org-export (link desc format)
   "Return the LINK with DESC converted into html or markdown FORMAT.

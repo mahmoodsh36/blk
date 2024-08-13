@@ -895,6 +895,14 @@ property list describing a shell command, see `blk-grepper-grep',"
            data)))
     grep-results))
 
+(defun blk-open-by-id (id)
+  "Find an anchor by its ID, open it with `find-file'."
+  (let ((result (car (blk-find-by-id id))))
+    (when result
+      (find-file (plist-get result :filepath))
+      (goto-char (plist-get result :position))
+      t)))
+
 (defun blk-collect-all ()
   "Collect some data about the text files that we know of."
   (mapcar
