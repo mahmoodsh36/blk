@@ -973,7 +973,7 @@ property list describing a shell command, see `blk-grepper-grep',"
 
 (defun blk-enable-completion ()
   "enable completion for ids/titles recognized by blk, by adding the `blk-completion-at-point' function
-to `completion-at-point-functions', currently only single-word id completion is implemented.
+to `completion-at-point-functions'.
 example usage:
 (add-hook 'org-mode-hook #'blk-enable-completion)"
   (add-to-list 'completion-at-point-functions

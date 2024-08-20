@@ -95,7 +95,7 @@ this will cause the definition block from ~file1.org~ to be "transcluded" (inser
 
 the text to be transcluded for a specific link is defined by the pattern in ~blk-rg-patterns~ (or ~blk-grep-patterns~, ~blk-emacs-patterns~, etc, if you decide to use another grepper)
 * different greppers
-the greppers available for use are currently the standard ~grep~ or ~ripgrep~ (~rg~), or ~emacs~ itself, only use emacs as the grepper if you really are trying to avoid the dependency of an external grepper as it is an order of magnitude slower than the other options, though it is good to note that the plus side of using emacs as the grepper is that it is aware of unsaved changes to buffers since it greps those instead of the files themselves when they're already opened in buffers.
+the greppers available for use are currently the standard ~grep~ or ~ripgrep~ (~rg~), or ~emacs~ itself. only use emacs as the grepper if you really are trying to avoid the dependency of an external grepper as it is an order of magnitude slower than the other options, though it is good to note that the plus side of using emacs as the grepper is that it is aware of unsaved changes to buffers since it greps those instead of the files themselves when they're already opened in buffers.
 
 for each grepper a different table of patterns is defined, the grepper is chosen by setting the variable ~blk-grepper~ and defaults to ~rg~ and falls back to ~grep~ if ~rg~ isnt installed, and falls back to using emacs if ~grep~ isnt found aswell.
 
