@@ -1,24 +1,7 @@
 #+title:      blk
-blk, fancily put, is a package for interlinking arbitrary blocks of text, with an emphasis on org mode.
-
-note that blk is still a WIP, but it already provides most of the functionality that i had in mind (initially) as it is.
-* usage demo
-
-https://github.com/mahmoodsheikh36/blk/assets/33814416/3676c7b1-6e72-4ae1-a4cc-9b8709a21e65
-
-in the video above, a headline and an org block are created and then navigated to.
-
-another example of linking and/or transcluding latex environments:
-
-https://github.com/mahmoodsheikh36/blk/assets/33814416/4f291b4f-b788-43f7-949f-c20a1e8073a5
-
+more documentation may be found at https://mahmoodsh36.github.io/blk.html
 * introduction
-blk is a very customizable, small package for interlinking arbitrary blocks of text, focused on org mode. as unoriginal and redundant as that may sound, this package doesnt do anything fancy and doesnt try to be anything but a glorified grepper. read on and you shall see how simple yet powerful the philosophy behind this package can be.
-* why
-the idea behind blk is that "grepping" should suffice for most note-taking and text-interlinking related tasks, and anything more sophisticated would introduce complications that make customizability a harder task for users. the main motive for writing this package was my growing frustration with the current state of note-taking packages like ~org-roam~ (it is a great package, this is not to downplay its usefulness and in no way meant as an offense to the people who worked on it, as i feel nothing but appreciation towards the emacs community as a whole), which was of all the most painful to tame to fit a workflow that made sense to me, i considered other alternatives like ~denote~ and ~hyperbole~, but i then settled for a small collection of utility functions which was more than enough, i eventually decided to put this functionality into a package for it could be useful to others aswell.
-
-this package doesnt try to introduce any new syntax or restrictions, it merely builds on whats available and tries to be integrable with other available packages or standards. so as to avoid being just another equivalent choice in the long list of available note-taking packages.
-
+blk tries to generalize the idea of creating and navigating titles of text files, as well as making links from one file to another, or one block to another (possibly in different files). if you have used org-roam, denote, or other similar tools like obsidian and logseq, you would know that inserting links between two files (or nodes, as they're usually called) and navigating them is a must-have feature for note-taking, with ~blk~, instead of restricting links to specific elements of text, such as a file or a heading, we can insert links to arbitrary forms of text, be it links to an org heading (or markdown heading), or a code block in an org file, or even links to python functions, elisp functions, or an html element (by its id).
 * installation & basic configuration
 basic installation with the basic features
 
@@ -28,9 +11,10 @@ basic installation with the basic features
     :after (org)
     :config
     (setq blk-directories
-          (list (expand-file-name "~/notes")))
+          (list (expand-file-name "~/notes")
+                user-emacs-directory))
     (add-hook 'org-mode-hook #'blk-enable-completion)
-    (setq blk-use-cache t)
+    (setq blk-use-cache t) ;; makes completion faster
     (global-set-key (kbd "C-c o") #'blk-open-at-point)
     (global-set-key (kbd "C-c f") #'blk-find)
     (global-set-key (kbd "C-c i") #'blk-insert))
@@ -48,98 +32,18 @@ basic installation with ~org-transclusion~ "integration"
     :after (org org-transclusion)
     :config
     (setq blk-directories
-          (list (expand-file-name "~/notes")))
+          (list (expand-file-name "~/notes")
+                user-emacs-directory))
     (add-hook 'org-mode-hook #'blk-enable-completion)
-    (setq blk-use-cache t)
     (blk-configure-org-transclusion)
+    (setq blk-use-cache t) ;; makes completion faster
     (global-set-key (kbd "C-c o") #'blk-open-at-point)
     (global-set-key (kbd "C-c f") #'blk-find)
     (global-set-key (kbd "C-c i") #'blk-insert))
 #+end_src
-
-* basic functionality
-say you have the following block in ~file1.org~:
-
-#+begin_src org :eval no :exports code
-  ,#+begin_definition :title definition of a set :name def-set
-  a set is defined to be an arbitrary collection of items
-  ,#+end_definition
-#+end_src
-
-first, since the block has a ~:title~ property it will be listed in the completing-read interface of ~blk-find~ and could be navigated to using its title (like ~org-roam-node-open~ except blk supports not only files or headers but also blocks and other patterns of text)
-
-now say you have another file ~file2.tex~:
-
-#+begin_src latex :eval no :exports code
-  this is an example of a set:
-  \begin{equation}\label{set-example1}
-    x = \{10, \emptyset, \{1\}, 3\}
-  \end{equation}
-#+end_src
-
-and then in another file ~code.el~ what you could do is:
-
-#+begin_src emacs-lisp :eval no
-  (defun generate-set ()
-    "refer to blk:def-set and blk:set-example1"
-    (list 10 20))
-#+end_src
-
-if you have ~org-transclusion~ enabled, you can also transclude the pattern the link is defined to link to, e.g. in another file ~file3.org~ you can do
-
-#+begin_src org
-  ,#+transclude: [[blk:def-set]]
-#+end_src
-
-this will cause the definition block from ~file1.org~ to be "transcluded" (inserted) into the buffer of ~file3.org~ when ~org-transclusion-add-all~ is executed (happens automatically when an org file is opened).
-
-the text to be transcluded for a specific link is defined by the pattern in ~blk-rg-patterns~ (or ~blk-grep-patterns~, ~blk-emacs-patterns~, etc, if you decide to use another grepper)
-* different greppers
-the greppers available for use are currently the standard ~grep~ or ~ripgrep~ (~rg~), or ~emacs~ itself. only use emacs as the grepper if you really are trying to avoid the dependency of an external grepper as it is an order of magnitude slower than the other options, though it is good to note that the plus side of using emacs as the grepper is that it is aware of unsaved changes to buffers since it greps those instead of the files themselves when they're already opened in buffers.
-
-for each grepper a different table of patterns is defined, the grepper is chosen by setting the variable ~blk-grepper~ and defaults to ~rg~ and falls back to ~grep~ if ~rg~ isnt installed, and falls back to using emacs if ~grep~ isnt found aswell.
-
-- ~blk-grepper-rg~ <-> ~blk-rg-patterns~
-- ~blk-grepper-grep~ <-> ~blk-grep-patterns~
-- ~blk-grepper-emacs~ <-> ~blk-emacs-patterns~
-
-* other packages
-** denote
-~denote~ can be easily used with ~blk~ as their features dont overlap, personally, i use denote as a tool to keep my org files names in sync with the in-buffer org settings and ~blk~ to insert/open/navigate links and blocks of text.
-** org-roam
-* extending blk
-** creating custom rules
-~blk~ finds candidates using the rules defined in the list ~blk-patterns~, to add your own rule you can add it to the list, or even better, add it to the list of rules that is defined for the specific grepper that you decided to use, see the *different greppers* section.
-
-for example, what i personally like to do when writing math is write blocks like the following:
-
-#+begin_src org
-  ,#+begin_definition :defines topological space :name def-top-spc
-  a set \(X\) for which a topology \(\mathcal{T}\) has been specified is called a /topological space/.
-  ,#+end_definition
-#+end_src
-
-what i want to be able to do is navigate to this "definition" using the value after ~:defines~, and link to this definition using the link ~[[blk:def-top-spc]]~ (which by the way can be inserted anywhere and opened using ~blk-open-at-point~, not just org files).
-
-to make this possible i write:
-
-#+begin_src emacs-lisp
-  (add-to-list blk-rg-patterns (list :title "definition"
-                                     :glob "*.org"
-                                     :anchor-regex "(:defines)\\s+[^:]+"
-                                     :title-function 'blk-value-after-space-upto-colon
-                                     :extract-id-function 'blk-org-id-at-point))
-  (setq blk-patterns blk-rg-patterns) ;; you might have to run this unless you modify the variable blk-patterns directly
-#+end_src
-
-see the documentation of ~blk-patterns~ for what each property is for.
 * blk vs interactive grepping
 if something like ~consult-grep~ is enough for you, and you dont need to make links to specific locations in your files or notes, then this package isnt for you, what it does is that it takes the idea of writing links to other files and extends it to more than just files, it allows for making links to arbitrary blocks of text and transcluding them from one file into another, the transclusion part is to avoid copying for example one equation from an org file into another, you can simply transclude it by its id, this reduces work and keeps the equation in the different files in sync (when the source is edited).
 note that ~org-transclusion~ on its own can handle blocks of text, but you would have to write the filename explicitly, specify what to search for in the file, and what exactly to transclude, ~blk~ abstracts this hassle away and allows for unambiguous transclusions (as long as the destination's id is unique).
 * todo
-** org-roam backlink buffer integration
-** denote backlink buffer integration
 ** rules for file names without needing to grep them (similar to what denote does)
-** efficiency concerns
-** capture templates
 ** add support for ~customize~ (customization via the default interface, i.e. without code)
