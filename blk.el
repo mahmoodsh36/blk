@@ -188,7 +188,7 @@ consult the documentation of `blk-patterns' for the keywords.")
   (list :shared-name 'blk-org-file-rule
         :title "org file"
         :glob "*.org"
-        :anchor-regex "(#\\+title:|#\\+alias:)\\s+[^:]+"
+        :anchor-regex "^(#\\+title:|#\\+alias:)\\s+[^:]+"
         :title-function 'blk-value-after-space
         :extract-id-function #'blk-org-id-at-point)
   "Used in `blk-rg-patterns' to match titles of org files.
@@ -447,14 +447,12 @@ command is to be used.")
     ('blk-grepper-emacs blk-emacs-patterns))
   "The list of patterns to use with the blk grepper.
 Each entry should be a plist representing the data of a pattern:
-  :title is the title/type of the pattern (used for completing-read)
-  :filename-regex is the regex to match files to be grepped; this
-    should always be an emacs regex because matching filenames is done in
-    Elisp.
+  :title is the title/type of the pattern (used for completing-read).
+  :glob is the glob pattern to matches files to be grepped.
   :anchor-regex is the regex for matching blocks of text that contain
     the target value which is then passed to :title-function to be
     turned into the final desired value to be passed to completing-read
-    to serve as the entry in the completing-read menu for the target
+    to serve as the entry in the completing-read menu for the target.
   :src-id-function is the function that gets the id to be used when
     creating links to the target; the need for :src-id-function over
     :title-function is that an id and a name/title for a target can be
@@ -463,11 +461,20 @@ Each entry should be a plist representing the data of a pattern:
     value and strips unnecessary turning it into just the id,
     think \\label{my-id} -> my-id
   :title-function is used alone to make the id be the name itself.
-  :transclusion-function currently is a function that should take
+  :transclusion-function is a function that should take
     the match and return an object or plist that can be handled by
     org-transclusion, this allows for easily defining custom transclusion
     functions for different patterns of text.  see the function
-    `blk-org-trancslusion-at-point' for an example")
+    `blk-org-trancslusion-at-point' for an example.
+  :extract-id-function is a function that, given a title, opens the
+    destination entry using the gathered metadata and grabs the id
+    that corresponds to a particular entry.  for example, given a
+    result that matched the title of an org file, this function
+    is called after opening the org file, the grep-result is passed
+    to it, it should return the id of the org file that was opened.
+    this is needed because when grepping we cant tell which id is
+    is associated with which title (even if they're in the same file
+    or belong to the same portion of text).")
 
 (defmacro blk-with-file-as-current-buffer (file &rest body)
   "Macro that reads FILE into the current buffer and executes BODY."
@@ -601,18 +608,74 @@ the groupings rules are defined in `blk-groups'"
           (push (cons result-file (list result)) files-entries))))
     ;; sort the grep entries of each file by their positions
     (dolist (file-entries files-entries)
-      (setcdr file-entries (cl-sort (cdr file-entries)
-                                    '<
-                                    :key (lambda (entry) (plist-get entry :position)))))
+      (setcdr file-entries
+              (cl-sort (cdr file-entries)
+                       '<
+                       :key (lambda (entry) (plist-get entry :position)))))
     ;; gather the groups
     (dolist (group blk-groups)
       (dolist (file-entries files-entries)
-        (let ((new-groups (blk-group-entries-helper file-entries (plist-get group :rules))))
-          (when (not (equal 'discard new-groups))
-            (dolist (new-group new-groups)
-              (let ((group-with-properties (copy-tree group)))
-                (plist-put group-with-properties :grep-entries new-group)
-                (push group-with-properties final-groups)))))))
+        (let* ((group-rules (plist-get group :rules))
+               (first-rule (car group-rules))
+               (last-rule (car (last group-rules)))
+               (new-groups))
+          (dolist (entry file-entries)
+            (let ((prev-rule))
+              (dolist (group-rule group-rules)
+                (when (equal group-rule
+                             (plist-get (plist-get entry :matched-pattern)
+                                        :shared-name))
+                  (if (equal group-rule first-rule)
+                      ;; create a new group
+                      (let ((new-group (copy-tree group)))
+                        (plist-put new-group :grep-entries (list entry))
+                        (push new-group new-groups))
+                    ;; append the entry onto existent groups
+                    (dolist (new-group new-groups)
+                      (let ((allow t))
+                        (when (equal prev-rule
+                                     (plist-get
+                                      (plist-get
+                                       (car (last (plist-get new-group :grep-entries)))
+                                       :matched-pattern)
+                                      :shared-name))
+                          ;; check if this entry belongs to another group and not this one
+                          (dolist (other-new-group new-groups)
+                            (when (and (equal prev-rule
+                                              (plist-get
+                                               (plist-get
+                                                (car (last (plist-get other-new-group
+                                                                      :grep-entries)))
+                                                :matched-pattern)
+                                               :shared-name))
+                                       (> (plist-get entry :position)
+                                          (plist-get
+                                           (car (last (plist-get other-new-group
+                                                                 :grep-entries)))
+                                           :position))
+                                       (> (plist-get
+                                           (car (last (plist-get other-new-group
+                                                                 :grep-entries)))
+                                           :position)
+                                          (plist-get
+                                           (car (last (plist-get new-group
+                                                                 :grep-entries)))
+                                           :position)))
+                              (setq allow nil)))
+                          ;; we have to make a copy because other entries have to make use
+                          ;; of the "incomplete" grouping 'new-group', if we delete it
+                          ;; after one use then we'd be disregarding all entries that would
+                          ;; complement it except the first.
+                          (when allow
+                            (let ((new-new-group (copy-tree new-group)))
+                              (plist-put new-new-group
+                                         :grep-entries
+                                         (append (plist-get new-group :grep-entries)
+                                                 (list entry)))
+                              (if (equal group-rule last-rule)
+                                  (push new-new-group final-groups)
+                                (push new-new-group new-groups)))))))))
+                  (setq prev-rule group-rule)))))))
     ;; make the final groups of grep-result entries resemble grep-result entries of thsemselves, so that they can be handled as such by blk-find or other functions that accept grep-result entries, perhaps not the best way to go about it in terms of code readability.
     (dolist (final-group final-groups)
       (let* ((final-group-grep-entries (plist-get final-group :grep-entries))
@@ -626,37 +689,6 @@ the groupings rules are defined in `blk-groups'"
         (plist-put final-group :position (plist-get last-grep-entry-in-group :position))
         (plist-put final-group :filepath (plist-get last-grep-entry-in-group :filepath))))
     final-groups))
-
-(defun blk-group-entries-helper (grep-results rule-names)
-  "A helper for `blk-group-entries'."
-  (if rule-names
-      (if grep-results
-          (let ((groups)
-                (grep-results-iterator grep-results))
-            (while grep-results-iterator
-              (let ((current-grep-result (car grep-results-iterator))
-                    (current-rule-name (car rule-names)))
-                ;; find all possible candidates for the current rule
-                (when (equal current-rule-name (plist-get (plist-get current-grep-result :matched-pattern)
-                                                          :shared-name))
-                  ;; cross product of the possible candidates of this rule by the possible candidates of
-                  ;; the next rule by the possible candidates of the next-to-next rule, and so on.. rescursively.
-                  ;; note that these "cross products" have to maintain their order and the next rules are
-                  ;; reserved for entries whose positions are later than the positions of the corresponding
-                  ;; previous entries (current entries).
-                  (let ((result (blk-group-entries-helper (cdr grep-results-iterator)
-                                                          (cdr rule-names))))
-                    (when (not (equal result 'discard))
-                      (dolist (subgroup result)
-                        (let ((new-group (append (list current-grep-result) subgroup)))
-                          (push new-group groups)))))))
-              (setq grep-results-iterator (cdr grep-results-iterator)))
-            groups)
-        ;; if we get here it means we have rules left but no candidates, we return `discard'
-        ;; which should be interpreted as a "discard" signal in parent recursion calls
-        'discard)
-    ;; if we get here it means we've exhausted all the groups, and we may return gracefully
-    (list nil)))
 
 (defun blk-str-list-matches (regex str-list)
   "Return a list of the strings matching REGEX in STR-LIST."
