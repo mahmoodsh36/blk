@@ -460,7 +460,9 @@ Each entry should be a plist representing the data of a pattern:
     a more memorable sequence of characters.  the function takes the matched
     value and strips unnecessary turning it into just the id,
     think \\label{my-id} -> my-id
-  :title-function is used alone to make the id be the name itself.
+  :title-function is a function that takes as an argument the matched
+    text and extracts the title from it.
+    think \"#+title: my-title\" -> \"my-title\".
   :transclusion-function is a function that should take
     the match and return an object or plist that can be handled by
     org-transclusion, this allows for easily defining custom transclusion
