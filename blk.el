@@ -32,7 +32,7 @@
 
 (defcustom blk-directories (list (expand-file-name "~/notes/")
 				 user-emacs-directory)
-  "Blk directories within which to find files to insert and search for links.")
+  "Blk directories within which to find files and grep them for ID's and titles.")
 
 (defcustom blk-search-recursively nil
   "Non-nil means to invoke greppers recursively in `blk-directories'.
