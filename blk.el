@@ -420,7 +420,7 @@ returns a plist that is then passed to org-transclusion"
   (list :command "rg --max-depth 1 --field-match-separator '\t' --regexp \"%r\" %f --no-heading --line-number --ignore-case --byte-offset --only-matching --with-filename"
         :delimiter "\t"
         :glob-arg "--glob "
-        :recursive-arg "--max-depth 10000") ;; rg can handle a dupe arg, the latter overrides the former.
+        :recursive-arg "--max-depth 10000") ;; rg can handle a duped arg, the latter overrides the former.
   "The \"grepper\" definition for ripgrep.")
 
 (defun blk-choose-grepper ()
