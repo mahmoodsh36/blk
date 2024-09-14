@@ -895,9 +895,9 @@ property list describing a shell command, see `blk-grepper-grep',"
 (defun blk-find-links-to-id (id)
   "Find links that point to ID."
   (let* ((id-patterns
-          (cl-remove-if
+          (cl-remove-if-not
            (lambda (pattern)
-             (plist-get pattern :title-function))
+             (plist-get pattern :dest-id-function))
            blk-patterns))
          (grep-results
           (cl-remove-if-not
@@ -905,9 +905,12 @@ property list describing a shell command, see `blk-grepper-grep',"
              (equal (plist-get entry :target-id) id))
            (mapcar
             (lambda (grep-result)
+              ;; (message "got2 %s" grep-result)
               (plist-put grep-result
                          :target-id
-                         (funcall (plist-get (plist-get grep-result :matched-pattern) :id-function)
+                         (funcall (plist-get
+                                   (plist-get grep-result :matched-pattern)
+                                   :dest-id-function)
                                   (plist-get grep-result :matched-value))))
             (blk-grep blk-grepper id-patterns blk-directories)))))
     grep-results))
