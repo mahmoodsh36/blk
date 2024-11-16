@@ -310,6 +310,11 @@ consult the documentation of `blk-patterns' for the keywords.")
                        blk-org-block-rule)))
   "group titles together for full outlines when navigating them")
 
+(defcustom blk-ignored-files
+  nil
+  "A list of files (or regex patterns describing filepaths) that are ignored
+when collecting entries.")
+
 (defun join-with-slash (strings)
   "Join STRINGS with forward slash."
   (string-join strings "/"))
@@ -887,10 +892,23 @@ in `blk-insert-patterns' for the current major mode"
 `grepper' can be a function that takes in the pattern tables and files
 as arguments; see `blk-grepper-emacs'.  Alternatively, it may be a
 property list describing a shell command, see `blk-grepper-grep',"
-  (if (functionp grepper)
-      (funcall grepper patterns directories)
-    (when (listp grepper)
-      (blk-run-grep-cmd grepper patterns directories))))
+  (blk-remove-ignored-files
+   (if (functionp grepper)
+       (funcall grepper patterns directories)
+     (when (listp grepper)
+       (blk-run-grep-cmd grepper patterns directories)))))
+
+(defun blk-remove-ignored-files (data)
+  "Remove entries with files matching `blk-ignored-files'"
+  (cl-delete-if
+   (lambda (entry)
+     (let ((to-ignore)
+           (filepath (plist-get entry :filepath)))
+       (dolist (filepath-regex blk-ignored-files)
+         (setq to-ignore (or to-ignore (blk-string-search-regex filepath-regex filepath))))
+       to-ignore))
+   data))
+
 
 (defun blk-find-links-to-id (id)
   "Find links that point to ID."
