@@ -899,7 +899,7 @@ property list describing a shell command, see `blk-grepper-grep',"
        (blk-run-grep-cmd grepper patterns directories)))))
 
 (defun blk-remove-ignored-files (data)
-  "Remove entries with files matching `blk-ignored-files'"
+  "Remove entries with files matching `blk-ignored-files'."
   (cl-delete-if
    (lambda (entry)
      (let ((to-ignore)
