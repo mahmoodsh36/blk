@@ -139,14 +139,21 @@ org-transclusion to be handled for transclusion in an org buffer."
                (equal (org-element-property :key elm) "IDENTIFIER"))
           ;; skip over the file keywords
           (save-excursion
-            (while (and (equal (org-element-type (org-element-at-point)) 'keyword)
-                        (eq (line-number-at-pos) (line-number-at-pos (point-max))))
-              (forward-line))
-            (list :src-content (buffer-substring (point)
-                                                 (point-max))
-                  :src-buf (current-buffer)
-                  :src-beg (point)
-                  :src-end (point-max)))))))))
+            (let ((no-text))
+              (while (and (equal (org-element-type (org-element-at-point)) 'keyword)
+                          (not no-text))
+                ;; check if we are at the last line
+                (if (eq (line-number-at-pos)
+                        (line-number-at-pos (point-max)))
+                    (setq no-text t)
+                  (forward-line)))
+              ;; file contains no text except the keywords, dont transclude
+              (when (not no-text)
+                (list :src-content (buffer-substring (point)
+                                                     (point-max))
+                      :src-buf (current-buffer)
+                      :src-beg (point)
+                      :src-end (point-max)))))))))))
 
 (defun blk-org-named-target-value (str)
   "For an STR equal to <<<my-target>>>, returns my-target."
