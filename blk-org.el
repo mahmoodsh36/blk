@@ -139,7 +139,8 @@ org-transclusion to be handled for transclusion in an org buffer."
                (equal (org-element-property :key elm) "IDENTIFIER"))
           ;; skip over the file keywords
           (save-excursion
-            (while (equal (org-element-type (org-element-at-point)) 'keyword)
+            (while (and (equal (org-element-type (org-element-at-point)) 'keyword)
+                        (eq (line-number-at-pos) (line-number-at-pos (point-max))))
               (forward-line))
             (list :src-content (buffer-substring (point)
                                                  (point-max))
